@@ -1,0 +1,19 @@
+# CIFAR-10 Split Comparison Experiment Configuration
+
+# Experiment settings
+split_method: both  # Options: random, gold, or both
+max_epochs: 50
+batch_size: 128
+learning_rate: 0.001
+random_state: 42
+
+# Data settings
+data_dir: ./data
+
+# MLFlow settings
+mlflow_tracking_uri: ./mlruns
+experiment_name: cifar10-split-comparison
+
+# Additional settings
+num_workers: 4
+val_size: 0.2

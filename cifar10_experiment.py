@@ -13,10 +13,11 @@ The experiment uses:
 - AUROC metric on validation set for model selection
 """
 
-import argparse
 import os
 from typing import Tuple
 
+import hydra
+from omegaconf import DictConfig, OmegaConf
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -381,87 +382,38 @@ def run_experiment(
     }
 
 
-def main():
+@hydra.main(version_base=None, config_path="conf", config_name="config")
+def main(cfg: DictConfig):
     """
     Main function to run experiments with different split strategies
+    Uses Hydra for configuration management
     """
-    parser = argparse.ArgumentParser(
-        description='CIFAR-10 Split Comparison Experiment'
-    )
-    parser.add_argument(
-        '--split-method',
-        type=str,
-        default='both',
-        choices=['random', 'gold', 'both'],
-        help='Split method to use: random, gold, or both (default: both)'
-    )
-    parser.add_argument(
-        '--max-epochs',
-        type=int,
-        default=50,
-        help='Maximum number of training epochs (default: 50)'
-    )
-    parser.add_argument(
-        '--batch-size',
-        type=int,
-        default=128,
-        help='Batch size for training (default: 128)'
-    )
-    parser.add_argument(
-        '--learning-rate',
-        type=float,
-        default=0.001,
-        help='Learning rate for optimizer (default: 0.001)'
-    )
-    parser.add_argument(
-        '--data-dir',
-        type=str,
-        default='./data',
-        help='Directory to store CIFAR-10 data (default: ./data)'
-    )
-    parser.add_argument(
-        '--mlflow-tracking-uri',
-        type=str,
-        default='./mlruns',
-        help='MLFlow tracking URI (default: ./mlruns)'
-    )
-    parser.add_argument(
-        '--experiment-name',
-        type=str,
-        default='cifar10-split-comparison',
-        help='MLFlow experiment name (default: cifar10-split-comparison)'
-    )
-    parser.add_argument(
-        '--random-state',
-        type=int,
-        default=42,
-        help='Random seed for reproducibility (default: 42)'
-    )
-    
-    args = parser.parse_args()
+    # Print configuration
+    print("Configuration:")
+    print(OmegaConf.to_yaml(cfg))
     
     # Create necessary directories
-    os.makedirs(args.data_dir, exist_ok=True)
+    os.makedirs(cfg.data_dir, exist_ok=True)
     os.makedirs('./checkpoints', exist_ok=True)
     
     results = []
     
     # Run experiments based on split method argument
-    if args.split_method == 'both':
+    if cfg.split_method == 'both':
         split_methods = ['random', 'gold']
     else:
-        split_methods = [args.split_method]
+        split_methods = [cfg.split_method]
     
     for split_method in split_methods:
         result = run_experiment(
             split_method=split_method,
-            max_epochs=args.max_epochs,
-            batch_size=args.batch_size,
-            learning_rate=args.learning_rate,
-            data_dir=args.data_dir,
-            mlflow_tracking_uri=args.mlflow_tracking_uri,
-            experiment_name=args.experiment_name,
-            random_state=args.random_state
+            max_epochs=cfg.max_epochs,
+            batch_size=cfg.batch_size,
+            learning_rate=cfg.learning_rate,
+            data_dir=cfg.data_dir,
+            mlflow_tracking_uri=cfg.mlflow_tracking_uri,
+            experiment_name=cfg.experiment_name,
+            random_state=cfg.random_state
         )
         results.append(result)
     

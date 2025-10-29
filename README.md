@@ -13,6 +13,7 @@ This experiment compares two data splitting strategies for training a CNN on CIF
 - **Dataset**: CIFAR-10 from torchvision
 - **Model**: Simple convolutional neural network (CNN)
 - **Training**: PyTorch Lightning for efficient training management
+- **Configuration**: Hydra for flexible configuration management
 - **Logging**: MLFlow for experiment tracking and comparison
 - **Metric**: AUROC (Area Under ROC Curve) on validation set for model selection
 
@@ -24,42 +25,60 @@ pip install -r requirements.txt
 
 ### Usage
 
-#### Run both split methods for comparison:
+The experiment uses [Hydra](https://hydra.cc/) for configuration management. All parameters can be configured via the `conf/config.yaml` file or overridden via command line.
+
+#### Run both split methods for comparison (default):
 ```bash
 python cifar10_experiment.py
 ```
 
 #### Run only random split:
 ```bash
-python cifar10_experiment.py --split-method random
+python cifar10_experiment.py split_method=random
 ```
 
 #### Run only GoldSplitter split:
 ```bash
-python cifar10_experiment.py --split-method gold
+python cifar10_experiment.py split_method=gold
 ```
 
 #### Customize training parameters:
 ```bash
 python cifar10_experiment.py \
-    --max-epochs 100 \
-    --batch-size 256 \
-    --learning-rate 0.0001 \
-    --data-dir ./data \
-    --mlflow-tracking-uri ./mlruns \
-    --experiment-name my-experiment
+    max_epochs=100 \
+    batch_size=256 \
+    learning_rate=0.0001 \
+    data_dir=./data \
+    mlflow_tracking_uri=./mlruns \
+    experiment_name=my-experiment
 ```
 
-### Available Arguments
+#### Override multiple parameters:
+```bash
+python cifar10_experiment.py split_method=gold max_epochs=200 batch_size=64
+```
 
-- `--split-method`: Split method to use (`random`, `gold`, or `both`) [default: `both`]
-- `--max-epochs`: Maximum number of training epochs [default: `50`]
-- `--batch-size`: Batch size for training [default: `128`]
-- `--learning-rate`: Learning rate for optimizer [default: `0.001`]
-- `--data-dir`: Directory to store CIFAR-10 data [default: `./data`]
-- `--mlflow-tracking-uri`: MLFlow tracking URI [default: `./mlruns`]
-- `--experiment-name`: MLFlow experiment name [default: `cifar10-split-comparison`]
-- `--random-state`: Random seed for reproducibility [default: `42`]
+### Configuration
+
+The experiment configuration is located in `conf/config.yaml`. Default values:
+
+```yaml
+split_method: both        # Options: random, gold, or both
+max_epochs: 50
+batch_size: 128
+learning_rate: 0.001
+random_state: 42
+data_dir: ./data
+mlflow_tracking_uri: ./mlruns
+experiment_name: cifar10-split-comparison
+num_workers: 4
+val_size: 0.2
+```
+
+You can modify the config file or override any parameter via command line using Hydra's syntax:
+- `key=value` for simple overrides
+- `key.nested=value` for nested configurations
+- `+key=value` to add new parameters
 
 ### Viewing Results
 

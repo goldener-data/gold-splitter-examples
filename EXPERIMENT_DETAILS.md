@@ -217,22 +217,31 @@ This ensures that results can be reliably reproduced across runs.
 # Install dependencies
 pip install -r requirements.txt
 
-# Run both split methods
+# Run both split methods (uses default config)
 python cifar10_experiment.py
 
 # View results
 mlflow ui
 ```
 
-### Custom Configuration
+### Custom Configuration with Hydra
+
+The experiment uses [Hydra](https://hydra.cc/) for configuration management. All parameters are defined in `conf/config.yaml` and can be overridden via command line:
 
 ```bash
+# Run with custom parameters
 python cifar10_experiment.py \
-    --split-method both \
-    --max-epochs 100 \
-    --batch-size 256 \
-    --learning-rate 0.0001 \
-    --experiment-name "cifar10-large-scale"
+    split_method=both \
+    max_epochs=100 \
+    batch_size=256 \
+    learning_rate=0.0001 \
+    experiment_name=cifar10-large-scale
+
+# Run only gold split with custom epochs
+python cifar10_experiment.py split_method=gold max_epochs=200
+
+# View current configuration
+python cifar10_experiment.py --cfg job
 ```
 
 ## Output Interpretation
