@@ -291,5 +291,5 @@ To test different architectures:
 - **PyTorch**: https://pytorch.org/
 - **PyTorch Lightning**: https://lightning.ai/
 - **MLFlow**: https://mlflow.org/
-- **Goldener**: https://github.com/goldener-data/goldener
+- **Goldener**: Python library for smart data splitting
 - **CIFAR-10**: https://www.cs.toronto.edu/~kriz/cifar.html
