@@ -17,3 +17,6 @@ experiment_name: cifar10-split-comparison
 # Additional settings
 num_workers: 4
 val_size: 0.2
+
+# Debug settings
+debug_count: null  # Set to a number (e.g., 5) to limit validation/test batches for debugging. null = no limit
