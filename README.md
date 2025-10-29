@@ -22,6 +22,26 @@ Alternatively, you can use pip:
 pip install -e .
 ```
 
+## Development Setup
+
+This project uses pre-commit hooks with ruff and mypy for code quality:
+
+```bash
+# Install dev dependencies
+uv pip install -e ".[dev]"
+
+# Install pre-commit hooks
+pre-commit install
+
+# Run hooks manually on all files
+pre-commit run --all-files
+```
+
+The pre-commit hooks will automatically run:
+- **ruff**: Linting and formatting
+- **mypy**: Type checking
+- Additional checks: trailing whitespace, YAML validation, etc.
+
 ## Examples
 
 ### 1. Image Classification: CIFAR-10 with CNN
