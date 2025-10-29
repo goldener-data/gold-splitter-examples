@@ -49,8 +49,11 @@ This project uses [uv](https://github.com/astral-sh/uv) for dependency managemen
 # Install uv if you haven't already
 pip install uv
 
-# Install project dependencies
-uv pip install -e .
+# Sync project dependencies (creates/updates virtual environment)
+uv sync
+
+# Or sync with development dependencies
+uv sync --extra dev
 
 # Or use pip
 pip install -e .

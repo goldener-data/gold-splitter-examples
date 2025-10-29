@@ -10,11 +10,11 @@ This project uses [uv](https://github.com/astral-sh/uv) for dependency managemen
 # Install uv if you haven't already
 pip install uv
 
-# Install project dependencies
-uv pip install -e .
+# Sync project dependencies (creates/updates virtual environment)
+uv sync
 
-# Or install with development dependencies
-uv pip install -e ".[dev]"
+# Or sync with development dependencies
+uv sync --extra dev
 ```
 
 Alternatively, you can use pip:
@@ -28,7 +28,7 @@ This project uses pre-commit hooks with ruff and mypy for code quality:
 
 ```bash
 # Install dev dependencies
-uv pip install -e ".[dev]"
+uv sync --extra dev
 
 # Install pre-commit hooks
 pre-commit install
@@ -62,7 +62,7 @@ This experiment compares two data splitting strategies for training a CNN on CIF
 **Quick Start**:
 ```bash
 # Install dependencies (from repo root)
-uv pip install -e .
+uv sync
 
 # Run experiment
 cd image_classification_cifar10_cnn
