@@ -43,13 +43,27 @@ This experiment systematically compares two data splitting strategies for traini
 
 ## Installation
 
+This project uses [uv](https://github.com/astral-sh/uv) for dependency management. From the **repository root**, install dependencies:
+
 ```bash
-pip install -r requirements.txt
+# Install uv if you haven't already
+pip install uv
+
+# Install project dependencies
+uv pip install -e .
+
+# Or use pip
+pip install -e .
 ```
+
+All dependencies are defined in the root `pyproject.toml` file.
 
 ## Quick Start
 
 ```bash
+# Make sure you're in the experiment directory
+cd image_classification_cifar10_cnn
+
 # Run both split methods (uses default config)
 python cifar10_experiment.py
 
@@ -405,5 +419,6 @@ This ensures that results can be reliably reproduced across runs.
 
 - `cifar10_experiment.py`: Main experiment script
 - `conf/config.yaml`: Hydra configuration file
-- `requirements.txt`: Python dependencies
 - `README.md`: This file - complete documentation and user guide
+
+**Note**: Dependencies are managed at the repository root level in `pyproject.toml`.

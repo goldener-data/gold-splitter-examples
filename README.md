@@ -2,6 +2,26 @@
 
 Different examples using Goldener GoldSplitter during training Machine Learning models.
 
+## Installation
+
+This project uses [uv](https://github.com/astral-sh/uv) for dependency management. Install dependencies using:
+
+```bash
+# Install uv if you haven't already
+pip install uv
+
+# Install project dependencies
+uv pip install -e .
+
+# Or install with development dependencies
+uv pip install -e ".[dev]"
+```
+
+Alternatively, you can use pip:
+```bash
+pip install -e .
+```
+
 ## Examples
 
 ### 1. Image Classification: CIFAR-10 with CNN
@@ -21,8 +41,11 @@ This experiment compares two data splitting strategies for training a CNN on CIF
 
 **Quick Start**:
 ```bash
+# Install dependencies (from repo root)
+uv pip install -e .
+
+# Run experiment
 cd image_classification_cifar10_cnn
-pip install -r requirements.txt
 python cifar10_experiment.py
 ```
 
