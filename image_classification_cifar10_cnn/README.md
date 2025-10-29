@@ -118,5 +118,5 @@ The experiment will:
 - `cifar10_experiment.py`: Main experiment script
 - `conf/config.yaml`: Hydra configuration file
 - `requirements.txt`: Python dependencies
-- `EXPERIMENT_DETAILS.md`: Technical documentation with architecture details
-- `example_usage.sh`: Shell script with usage examples
+- `EXPERIMENT_DETAILS.md`: Technical documentation with architecture details and usage examples
+- `README.md`: This file - user guide and quick start

@@ -244,6 +244,61 @@ python cifar10_experiment.py split_method=gold max_epochs=200
 python cifar10_experiment.py --cfg job
 ```
 
+### Usage Examples
+
+Below are comprehensive examples demonstrating different ways to run the experiment:
+
+#### Example 1: Run both split methods (default)
+```bash
+python cifar10_experiment.py
+```
+
+#### Example 2: Run only random split
+```bash
+python cifar10_experiment.py split_method=random
+```
+
+#### Example 3: Run only GoldSplitter split
+```bash
+python cifar10_experiment.py split_method=gold
+```
+
+#### Example 4: Quick test with fewer epochs
+```bash
+python cifar10_experiment.py max_epochs=5
+```
+
+#### Example 5: Full training with custom parameters
+```bash
+python cifar10_experiment.py max_epochs=100 batch_size=256 learning_rate=0.0001
+```
+
+#### Example 6: Custom experiment name and data directory
+```bash
+python cifar10_experiment.py experiment_name=my-cifar10-test data_dir=/path/to/data
+```
+
+#### Example 7: Override multiple parameters
+```bash
+python cifar10_experiment.py split_method=gold max_epochs=200 batch_size=64 random_state=123
+```
+
+### Viewing Results with MLFlow
+
+After running the experiment, start the MLFlow UI:
+```bash
+mlflow ui
+```
+
+Then open `http://localhost:5000` in your browser to compare results between split methods.
+
+### Hydra Configuration Tips
+
+- **Default config file**: `conf/config.yaml`
+- **Override any parameter**: Use `key=value` syntax
+- **View config**: `python cifar10_experiment.py --cfg job`
+- **View help**: `python cifar10_experiment.py --help`
+
 ## Output Interpretation
 
 After running the experiment, you will see:
