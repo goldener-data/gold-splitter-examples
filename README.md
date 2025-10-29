@@ -28,14 +28,6 @@ python cifar10_experiment.py
 
 See the [detailed README](image_classification_cifar10_cnn/README.md) for more information.
 
-## Contributing
-
-To add a new example:
-1. Create a new directory with a descriptive name
-2. Include a README.md with usage instructions
-3. Add requirements.txt with dependencies
-4. Update this main README with a link to your example
-
 ## About Goldener
 
 Goldener provides intelligent data splitting strategies that aim to create more balanced and representative train/validation splits compared to traditional random splitting.
