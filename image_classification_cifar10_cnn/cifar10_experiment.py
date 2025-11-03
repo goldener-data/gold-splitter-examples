@@ -304,13 +304,15 @@ def run_experiment(
     mlflow_tracking_uri: str = './mlruns',
     experiment_name: str = 'cifar10-split-comparison',
     random_state: int = 42,
-    debug_count: int = None
+    debug_count: int = None,
+    debug_train_count: int = None
 ):
     """
     Run a single experiment with the specified split method
     
     Args:
         debug_count: If set, limits validation and test to this many batches for debugging
+        debug_train_count: If set, limits training to this many batches per epoch for debugging
     """
     # Set random seeds for reproducibility
     pl.seed_everything(random_state)
@@ -362,6 +364,7 @@ def run_experiment(
         callbacks=[checkpoint_callback],
         deterministic=True,
         log_every_n_steps=50,
+        limit_train_batches=debug_train_count if debug_train_count is not None else 1.0,
         limit_val_batches=debug_count if debug_count is not None else 1.0,
         limit_test_batches=debug_count if debug_count is not None else 1.0
     )
@@ -420,7 +423,8 @@ def main(cfg: DictConfig):
             mlflow_tracking_uri=cfg.mlflow_tracking_uri,
             experiment_name=cfg.experiment_name,
             random_state=cfg.random_state,
-            debug_count=cfg.get('debug_count', None)
+            debug_count=cfg.get('debug_count', None),
+            debug_train_count=cfg.get('debug_train_count', None)
         )
         results.append(result)
     

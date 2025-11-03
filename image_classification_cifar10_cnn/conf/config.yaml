@@ -20,3 +20,4 @@ val_size: 0.2
 
 # Debug settings
 debug_count: null  # Set to a number (e.g., 5) to limit validation/test batches for debugging. null = no limit
+debug_train_count: null  # Set to a number (e.g., 10) to limit training batches for debugging. null = no limit
