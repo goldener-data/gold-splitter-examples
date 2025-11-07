@@ -28,9 +28,9 @@ class SimpleCNN(LightningModule):
         self.dropout = nn.Dropout(0.5)
 
         # Metrics
-        self.train_auroc = MulticlassAUROC(task="multiclass", num_classes=num_classes)
-        self.val_auroc = MulticlassAUROC(task="multiclass", num_classes=num_classes)
-        self.test_auroc = MulticlassAUROC(task="multiclass", num_classes=num_classes)
+        self.train_auroc = MulticlassAUROC(num_classes=num_classes)
+        self.val_auroc = MulticlassAUROC(num_classes=num_classes)
+        self.test_auroc = MulticlassAUROC(num_classes=num_classes)
 
         self.save_hyperparameters()
 
