@@ -1,30 +1,24 @@
 [project]
 name = "gold-split-examples"
 version = "0.1.0"
-description = "Examples using Goldener GoldSplitter during training Machine Learning models"
+description = "Examples using the GoldSplitter from Goldener during training Machine Learning models"
 readme = "README.md"
-requires-python = ">=3.9"
-license = { text = "MIT" }
+requires-python = ">=3.10"
+license-files= ["LICENSE"]
 authors = [
-    { name = "Goldener Contributors" }
+    {name = "goldener-data", email = "yann.chene.tni@gmail.com"},
 ]
 keywords = ["machine-learning", "data-splitting", "goldener", "pytorch", "deep-learning"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
 dependencies = [
     "torch",
-    "torchvision",
-    "pytorch-lightning",
+    "lightning",
     "mlflow",
     "goldener",
     "scikit-learn",
@@ -33,56 +27,26 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+vision = [
+    "torchvision",
+    "pillow"
+]
+
 dev = [
-    "pytest",
     "ruff",
     "mypy",
     "pre-commit",
 ]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
 
 [tool.uv]
 dev-dependencies = [
-    "pytest",
     "ruff",
     "mypy",
     "pre-commit",
 ]
 
-[tool.ruff]
-line-length = 100
-target-version = "py39"
-
-[tool.ruff.lint]
-select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "B",   # flake8-bugbear
-    "C4",  # flake8-comprehensions
-    "UP",  # pyupgrade
-]
-ignore = [
-    "E501",  # line too long (handled by formatter)
-]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-
-[tool.mypy]
-python_version = "3.9"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-check_untyped_defs = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-strict_equality = true
+[project.urls]
+Homepage = "https://github.com/goldener-data/gold-splitter-examples"
+Repository = "https://github.com/goldener-data/gold-splitter-examples"
+Issues = "https://github.com/goldener-data/gold-splitter-examples/issues"

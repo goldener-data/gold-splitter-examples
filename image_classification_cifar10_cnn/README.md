@@ -24,7 +24,10 @@ This experiment compares two data splitting strategies for training a CNN on CIF
 
 ## Overview
 
-This experiment systematically compares two data splitting strategies for training machine learning models. Data splitting is a critical step that can significantly impact model performance and generalization. While random splitting is the standard approach, smart splitting strategies like GoldSplitter aim to create more balanced and representative train/validation splits, potentially leading to:
+This experiment systematically compares two data splitting strategies for training machine learning models.
+Data splitting is a critical step that can significantly impact model performance and generalization.
+While random splitting is the standard approach, smart splitting strategies like GoldSplitter aim
+to create more balanced and representative train/validation splits, potentially leading to:
 
 - Better model generalization
 - More reliable validation metrics
@@ -41,34 +44,19 @@ This experiment systematically compares two data splitting strategies for traini
 - **Metric**: AUROC (Area Under ROC Curve) on validation set for model selection
 - **Reproducibility**: Fixed random seeds for reliable results
 
-## Installation
-
-This project uses [uv](https://github.com/astral-sh/uv) for dependency management. From the **repository root**, install dependencies:
-
-```bash
-# Install uv if you haven't already
-pip install uv
-
-# Sync project dependencies (creates/updates virtual environment)
-uv sync
-
-# Or sync with development dependencies
-uv sync --extra dev
-
-# Or use pip
-pip install -e .
-```
-
 All dependencies are defined in the root `pyproject.toml` file.
 
 ## Quick Start
 
 ```bash
+# Install dependencies (from repo root)
+uv sync --extra vision
+
 # Make sure you're in the experiment directory
 cd image_classification_cifar10_cnn
 
 # Run both split methods (uses default config)
-python cifar10_experiment.py
+uv run python cifar10_experiment.py
 
 # View results
 mlflow ui
@@ -82,77 +70,21 @@ The experiment uses [Hydra](https://hydra.cc/) for configuration management. All
 
 ### Example 1: Run both split methods (default)
 ```bash
-python cifar10_experiment.py
+uv run python cifar10_experiment.py
 ```
 
-### Example 2: Run only random split
+### Example 2: Run with updated config
 ```bash
-python cifar10_experiment.py split_method=random
-```
-
-### Example 3: Run only GoldSplitter split
-```bash
-python cifar10_experiment.py split_method=gold
-```
-
-### Example 4: Quick test with fewer epochs
-```bash
-python cifar10_experiment.py max_epochs=5
-```
-
-### Example 5: Full training with custom parameters
-```bash
-python cifar10_experiment.py max_epochs=100 batch_size=256 learning_rate=0.0001
-```
-
-### Example 6: Custom experiment name and data directory
-```bash
-python cifar10_experiment.py experiment_name=my-cifar10-test data_dir=/path/to/data
-```
-
-### Example 7: Override multiple parameters
-```bash
-python cifar10_experiment.py split_method=gold max_epochs=200 batch_size=64 random_state=123
-```
-
-### Example 8: Advanced configuration
-```bash
-python cifar10_experiment.py \
-    split_method=both \
-    max_epochs=100 \
-    batch_size=256 \
-    learning_rate=0.0001 \
-    experiment_name=cifar10-large-scale
+uv run python cifar10_experiment.py plit_method=gold max_epochs=100 batch_size=256 learning_rate=0.0001 experiment_name=my-cifar10-test data_dir=/path/to/data
 ```
 
 ### Hydra Configuration Tips
 
-- **Default config file**: `conf/config.yaml`
+- **Default config file**: `config/config.yaml`
 - **Override any parameter**: Use `key=value` syntax
 - **View config**: `python cifar10_experiment.py --cfg job`
 - **View help**: `python cifar10_experiment.py --help`
 
-## Configuration
-
-The experiment configuration is located in `conf/config.yaml`. Default values:
-
-```yaml
-split_method: both        # Options: random, gold, or both
-max_epochs: 50
-batch_size: 128
-learning_rate: 0.001
-random_state: 42
-data_dir: ./data
-mlflow_tracking_uri: ./mlruns
-experiment_name: cifar10-split-comparison
-num_workers: 4
-val_size: 0.2
-```
-
-You can modify the config file or override any parameter via command line using Hydra's syntax:
-- `key=value` for simple overrides
-- `key.nested=value` for nested configurations
-- `+key=value` to add new parameters
 
 ## Technical Details
 
@@ -171,14 +103,14 @@ You can modify the config file or override any parameter via command line using 
 transforms.RandomHorizontalFlip()
 transforms.RandomCrop(32, padding=4)
 transforms.ToTensor()
-transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], 
+transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
                     std=[0.2470, 0.2435, 0.2616])
 ```
 
 **Validation/Test Set**:
 ```python
 transforms.ToTensor()
-transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], 
+transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
                     std=[0.2470, 0.2435, 0.2616])
 ```
 
@@ -218,17 +150,17 @@ Output (10 classes)
 - **Optimizer**: Adam
   - Learning rate: 0.001 (default, configurable)
   - Weight decay: 0 (no L2 regularization)
-  
+
 - **Learning Rate Scheduler**: ReduceLROnPlateau
   - Monitor: Validation AUROC
   - Mode: Maximize
   - Factor: 0.5
   - Patience: 5 epochs
-  
+
 - **Loss Function**: CrossEntropyLoss
   - Combines LogSoftmax and NLLLoss
   - Applied to raw logits
-  
+
 - **Batch Size**: 128 (default, configurable)
 - **Max Epochs**: 50 (default, configurable)
 
@@ -282,13 +214,14 @@ train_indices, val_indices = train_test_split(
 ### 2. GoldSplitter (Smart Split)
 
 ```python
-from goldener import GoldSplitter
+from image_classification_cifar10_cnn.utils import get_gold_splitter
 
-splitter = GoldSplitter(
-    split_ratio=0.8,
-    random_state=42
+gold_splitter = get_gold_splitter(cfg)
+splits = gold_splitter.split(
+    dataset=dataset,
 )
-train_indices, val_indices = splitter.split(indices, labels)
+train_indices = splits['train']
+val_indices = splits['val']
 ```
 
 **Characteristics**:
@@ -308,7 +241,6 @@ GoldSplitter may provide:
 ### Evaluation Criteria
 
 Compare the two methods on:
-- **Best Validation AUROC**: Primary comparison metric
 - **Convergence Speed**: Epochs to reach best performance
 - **Stability**: Variance in validation metrics across epochs
 - **Test Performance**: Final performance on held-out test set
@@ -374,41 +306,6 @@ AUROC Difference (Gold - Random): +0.0145
 ============================================================
 ```
 
-## Extending the Experiment
-
-### Additional Split Methods
-
-To add more splitting strategies, extend the `_split_data` method in `CIFAR10DataModule`:
-
-```python
-elif self.split_method == 'stratified':
-    from sklearn.model_selection import StratifiedShuffleSplit
-    # Implementation
-```
-
-### Different Datasets
-
-The code structure can be adapted for other datasets:
-- Replace `CIFAR10` with another torchvision dataset
-- Adjust normalization values
-- Modify model input dimensions if needed
-
-### Model Variations
-
-To test different architectures:
-- Create a new model class inheriting from `pl.LightningModule`
-- Keep the same training interface
-- Compare performance across architectures and split methods
-
-## Reproducibility
-
-All experiments use fixed random seeds for reproducibility:
-- PyTorch Lightning: `pl.seed_everything(42)`
-- NumPy operations: `random_state=42`
-- Split methods: `random_state=42`
-
-This ensures that results can be reliably reproduced across runs.
-
 ## References
 
 - **PyTorch**: https://pytorch.org/
@@ -421,7 +318,7 @@ This ensures that results can be reliably reproduced across runs.
 ## Files
 
 - `cifar10_experiment.py`: Main experiment script
-- `conf/config.yaml`: Hydra configuration file
+- `config/config.yaml`: Hydra configuration file
 - `README.md`: This file - complete documentation and user guide
 
 **Note**: Dependencies are managed at the repository root level in `pyproject.toml`.

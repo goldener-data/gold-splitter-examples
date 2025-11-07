@@ -1,23 +1,26 @@
 # CIFAR-10 Split Comparison Experiment Configuration
 
+defaults:
+  - _self_
+  - gold_splitter: resnet18_splitter
+
 # Experiment settings
-split_method: both  # Options: random, gold, or both
+split_method: random  # Options: random, gold, or both
+val_ratio: 0.2
 max_epochs: 50
 batch_size: 128
 learning_rate: 0.001
+num_workers: 4
 random_state: 42
 
 # Data settings
-data_dir: ./data
+data_dir: data
 
 # MLFlow settings
-mlflow_tracking_uri: ./mlruns
-experiment_name: cifar10-split-comparison
+mlflow_tracking_uri: mlruns
+mlflow_experiment_name: cifar10-split-comparison
 
-# Additional settings
-num_workers: 4
-val_size: 0.2
 
-# Debug settings
+  # Debug settings
 debug_count: null  # Set to a number (e.g., 5) to limit validation/test batches for debugging. null = no limit
 debug_train_count: null  # Set to a number (e.g., 10) to limit training batches for debugging. null = no limit
