@@ -24,7 +24,7 @@ from lightning.pytorch.loggers import MLFlowLogger
 
 
 from image_classification_cifar10_cnn.data import CIFAR10DataModule
-from image_classification_cifar10_cnn.model import SimpleCNN
+from image_classification_cifar10_cnn.model import DinoLinearProbing
 
 
 logger = getLogger(__name__)
@@ -44,7 +44,7 @@ def run_experiment(
     )
 
     # Initialize model
-    model = SimpleCNN(num_classes=10, learning_rate=cfg.learning_rate)
+    model = DinoLinearProbing(num_classes=10, learning_rate=cfg.learning_rate)
 
     # Setup MLFlow logger
     mlflow_logger = MLFlowLogger(
@@ -111,7 +111,7 @@ def run_experiment(
     return {
         "split_method": split_method,
         "best_val_auroc": best_val_auroc.item(),
-        "test_results": test_results,
+        "test_results": test_results[0]["test_auroc"],
     }
 
 

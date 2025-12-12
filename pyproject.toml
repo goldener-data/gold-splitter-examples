@@ -29,6 +29,7 @@ dependencies = [
 [project.optional-dependencies]
 vision = [
     "torchvision",
+    "timm",
     "pillow"
 ]
 

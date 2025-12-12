@@ -1,11 +1,21 @@
 # CIFAR-10 Split Comparison Experiment Configuration
+gold_splitter:
+  layers: [ "blocks.9", ]
 
-defaults:
-  - _self_
-  - gold_splitter: resnet18_splitter
+  reducer:
+    _target_: goldener.reduce.GoldReducer
+    reducer:
+      _target_: sklearn.decomposition.PCA
+      n_components: 5
+
+  chunk: 2000
+
+  # shared settings for data loading
+  batch_size: 64
+  num_workers: 4
 
 # Experiment settings
-split_method: random  # Options: random, gold, or both
+split_method: gold  # Options: random, gold, or both
 val_ratio: 0.2
 max_epochs: 50
 batch_size: 128
@@ -20,6 +30,8 @@ data_dir: data
 mlflow_tracking_uri: mlruns
 mlflow_experiment_name: cifar10-split-comparison
 
+# pixeltable
+split_exists: False  # Set to True if splits are precomputed and saved
 
   # Debug settings
 debug_count: null  # Set to a number (e.g., 5) to limit validation/test batches for debugging. null = no limit

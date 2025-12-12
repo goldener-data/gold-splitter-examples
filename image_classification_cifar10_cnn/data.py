@@ -1,20 +1,57 @@
-from typing import Tuple
+from pathlib import Path
+from typing import Tuple, Callable
 
 from lightning import LightningDataModule
 import numpy as np
 from omegaconf import DictConfig
 from torch.utils.data import Subset, DataLoader
 import torchvision
+from torchvision.datasets import CIFAR10
 from torchvision.transforms.v2 import (
     Compose,
     Normalize,
     ToTensor,
     RandomHorizontalFlip,
-    RandomCrop,
+    CenterCrop,
 )
 from sklearn.model_selection import train_test_split
 
+
 from image_classification_cifar10_cnn.utils import get_gold_splitter
+
+
+class GoldCifar10(CIFAR10):
+    def __init__(
+        self,
+        root: str | Path,
+        train: bool = True,
+        transform: None | Callable = None,
+        target_transform: None | Callable = None,
+        download: bool = False,
+        count: int | None = None,
+    ) -> None:
+        self.count = count
+        super().__init__(
+            root=root,
+            train=train,
+            transform=transform,
+            target_transform=target_transform,
+            download=download,
+        )
+
+    def __len__(self) -> int:
+        return len(self.data) if self.count is None else min(self.count, len(self.data))
+
+    def __getitem__(self, index: int) -> Tuple:
+        if self.count is not None and index >= self.count:
+            raise IndexError(
+                "Index out of range for GoldSplitterCifar10 with limited count."
+            )
+        return super().__getitem__(index)
+
+    @property
+    def targets_as_array(self) -> np.ndarray:
+        return np.array(self.targets[: self.__len__()])
 
 
 class CIFAR10DataModule(LightningDataModule):
@@ -31,18 +68,25 @@ class CIFAR10DataModule(LightningDataModule):
         self.val_ratio = cfg["val_ratio"]
         self.random_state = cfg["random_state"]
         self.gold_splitter_cfg = cfg["gold_splitter"]
+        self.max_batches = cfg["debug_train_count"]
+        self.train_count = (
+            cfg["debug_train_count"] * self.batch_size
+            if cfg["debug_train_count"] is not None
+            else None
+        )
+        self.split_exists = cfg["split_exists"]
 
         # Define transforms
         self.transform_test = Compose(
             [
                 ToTensor(),
                 Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
+                CenterCrop(28),
             ]
         )
         self.transform_train = Compose(
             [
                 RandomHorizontalFlip(),
-                RandomCrop(32, padding=4),
             ]
             + list(self.transform_test.transforms)
         )
@@ -58,24 +102,26 @@ class CIFAR10DataModule(LightningDataModule):
 
     def setup(self, stage: str | None = None) -> None:
         # Load full training set
-        full_train_dataset = torchvision.datasets.CIFAR10(
+        full_train_dataset = GoldCifar10(
             root=self.data_dir,
             train=True,
             transform=self.transform_train,
             download=False,
+            count=self.train_count,
         )
 
-        train_indices, val_indices = self._split_data(full_train_dataset)
         if stage == "fit" or stage is None:
+            train_indices, val_indices = self._split_data(full_train_dataset)
             self.train_dataset = Subset(
                 dataset=full_train_dataset, indices=train_indices.tolist()
             )
             self.val_dataset = Subset(
-                dataset=torchvision.datasets.CIFAR10(
+                dataset=GoldCifar10(
                     root=self.data_dir,
                     train=True,
                     transform=self.transform_test,
                     download=False,
+                    count=self.train_count,
                 ),
                 indices=val_indices.tolist(),
             )
@@ -95,10 +141,16 @@ class CIFAR10DataModule(LightningDataModule):
                 test_size=int(self.val_ratio * len(dataset)),
                 random_state=self.random_state,
                 shuffle=True,
+                stratify=dataset.targets_as_array,
             )
         elif self.split_method == "gold":
-            gold_splitter = get_gold_splitter(self.gold_splitter_cfg, self.val_ratio)
-            splits = gold_splitter.split(dataset)
+            gold_splitter = get_gold_splitter(
+                self.gold_splitter_cfg, self.val_ratio, self.max_batches
+            )
+            split_table = gold_splitter.split_in_table(dataset)
+            splits = gold_splitter.get_split_indices(
+                split_table, selection_key="selected", idx_key="idx_sample"
+            )
             train_indices = np.array(list(splits["train"]))
             val_indices = np.array(list(splits["val"]))
         else:

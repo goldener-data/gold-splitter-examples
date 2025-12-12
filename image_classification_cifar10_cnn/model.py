@@ -1,33 +1,32 @@
+import timm
 from lightning import LightningModule
 import torch
 from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRSchedulerConfig
+from timm.models import VisionTransformer
 from torch import nn as nn
 from torch.nn import functional as F
 from torchmetrics.classification import MulticlassAUROC
 
 
-class SimpleCNN(LightningModule):
-    def __init__(self, num_classes: int = 10, learning_rate: float = 0.001) -> None:
-        super(SimpleCNN, self).__init__()
+class DinoLinearProbing(LightningModule):
+    def __init__(
+        self,
+        num_classes: int = 10,
+        learning_rate: float = 0.001,
+    ) -> None:
+        super().__init__()
         self.learning_rate = learning_rate
         self.num_classes = num_classes
 
-        # Convolutional layers
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+        self.vit = timm.create_model(
+            "vit_base_patch14_reg4_dinov2.lvd142m",
+            pretrained=True,
+            img_size=28,
+        )
 
-        # Pooling layer
-        self.pool = nn.MaxPool2d(2, 2)
+        assert isinstance(self.vit, VisionTransformer)
+        self.head = nn.Linear(self.vit.patch_embed.proj.out_channels, num_classes)
 
-        # Fully connected layers
-        self.fc1 = nn.Linear(128 * 4 * 4, 256)
-        self.fc2 = nn.Linear(256, num_classes)
-
-        # Dropout for regularization
-        self.dropout = nn.Dropout(0.5)
-
-        # Metrics
         self.train_auroc = MulticlassAUROC(num_classes=num_classes)
         self.val_auroc = MulticlassAUROC(num_classes=num_classes)
         self.test_auroc = MulticlassAUROC(num_classes=num_classes)
@@ -35,22 +34,9 @@ class SimpleCNN(LightningModule):
         self.save_hyperparameters()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Conv block 1
-        x = self.pool(F.relu(self.conv1(x)))
-        # Conv block 2
-        x = self.pool(F.relu(self.conv2(x)))
-        # Conv block 3
-        x = self.pool(F.relu(self.conv3(x)))
-
-        # Flatten
-        x = x.view(-1, 128 * 4 * 4)
-
-        # Fully connected layers
-        x = F.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = self.fc2(x)
-
-        return x
+        assert isinstance(self.vit, VisionTransformer)
+        x = self.vit.forward_features(x)
+        return self.head(x[:, 0, :])
 
     def training_step(
         self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
