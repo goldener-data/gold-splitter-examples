@@ -12,6 +12,7 @@ The experiment uses:
 - MLFlow for experiment tracking
 - AUROC metric on validation set for model selection
 """
+
 import logging
 import os
 from logging import getLogger
@@ -30,11 +31,7 @@ from image_classification_cifar10.model import DinoLinearProbing
 
 logger = getLogger(__name__)
 
-pxt.configure_logging(
-    to_stdout=True,
-    level=logging.WARNING,
-    remove="goldener"
-)
+pxt.configure_logging(to_stdout=True, level=logging.WARNING, remove="goldener")
 
 
 def run_experiment(
@@ -96,19 +93,19 @@ def run_experiment(
     )
 
     # Train the model
-    logger.info(f"\n{'='*60}")
+    logger.info(f"\n{'=' * 60}")
     logger.info(f"Training with {split_method.upper()} split method")
-    logger.info(f"{'='*60}\n")
+    logger.info(f"{'=' * 60}\n")
 
     trainer.fit(model, data_module)
 
     # Test the model
     test_results = trainer.test(model, data_module, ckpt_path="best")
 
-    logger.info(f"\n{'='*60}")
+    logger.info(f"\n{'=' * 60}")
     logger.info(f"Training completed for {split_method.upper()} split method")
     logger.info(f"Best validation AUROC: {checkpoint_callback.best_model_score:.4f}")
-    logger.info(f"{'='*60}\n")
+    logger.info(f"{'=' * 60}\n")
 
     best_val_auroc = checkpoint_callback.best_model_score
     assert best_val_auroc is not None

@@ -35,17 +35,11 @@ def collate_cifar10(
 
 
 def get_gold_splitter(
-    splitter_cfg: DictConfig,
-    train_ratio: float,
-    val_ratio: float,
-    max_batches: int
+    splitter_cfg: DictConfig, train_ratio: float, val_ratio: float, max_batches: int
 ) -> GoldSplitter:
-
     splitter_config = hydra.utils.instantiate(splitter_cfg)
     device = (
-        torch.device("cpu")
-        if not torch.cuda.is_available()
-        else torch.device("cuda")
+        torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
     )
     batch_size = splitter_config["batch_size"]
     num_workers = splitter_config["num_workers"]
@@ -54,13 +48,13 @@ def get_gold_splitter(
 
     extractor = TorchGoldFeatureExtractor(
         TorchGoldFeatureExtractorConfig(
-            model = timm.create_model(
+            model=timm.create_model(
                 model_name="vit_small_patch16_dinov3.lvd1689m",
                 pretrained=True,
                 img_size=224,
                 device=device,
             ),
-            layers=["blocks.9"]
+            layers=["blocks.9"],
         )
     )
 

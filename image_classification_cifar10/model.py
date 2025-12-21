@@ -27,10 +27,11 @@ class DinoLinearProbing(LightningModule):
 
         assert isinstance(self.vit, VisionTransformer) or isinstance(self.vit, Eva)
 
+        self.head: nn.Module
         if hidden_dims is None or len(hidden_dims) == 0:
             self.head = nn.Linear(self.vit.patch_embed.proj.out_channels, num_classes)
         else:
-            layers = []
+            layers: list[nn.Module] = []
             input_dim = self.vit.patch_embed.proj.out_channels
             for hidden_dim in hidden_dims:
                 layers.append(nn.Linear(input_dim, hidden_dim))
