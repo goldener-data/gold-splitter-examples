@@ -1,0 +1,30 @@
+# CIFAR-10 Split Comparison Experiment Configuration
+gold_splitter:
+  min_pxt_insert_size: 10000
+  batch_size: 128
+  num_workers: 15
+  table_name: cifar10_ten_percent_dinov3small_224
+  update_selection: False
+
+# Experiment settings
+split_method: gold  # Options: random, gold, or both
+train_ratio: 0.07
+val_ratio: 0.03
+
+max_epochs: 100
+batch_size: 128
+learning_rate: 0.001
+num_workers: 15
+random_state: 42
+
+# Data settings
+data_dir: data
+
+# MLFlow settings
+mlflow_tracking_uri: mlruns
+mlflow_experiment_name: cifar10-10percent
+mlflow_run_name: DinoV3Small-224
+
+# Debug settings
+debug_count: null  # Set to a number (e.g., 5) to limit validation/test batches for debugging. null = no limit
+debug_train_count: null  # Set to a number (e.g., 10) to limit training batches for debugging. null = no limit
