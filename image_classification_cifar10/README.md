@@ -153,10 +153,12 @@ train_indices, val_indices = train_test_split(
 
 ### 2. GoldSplitter (Smart Split)
 
+The smart split is done from the class token of the Dinov3 ViT-S model.
+
 ```python
 from image_classification_cifar10.utils import get_gold_splitter
 
-gold_splitter = get_gold_splitter(cfg)
+gold_splitter = get_gold_splitter(cfg.gold_splitter)
 split_table = gold_splitter.split_in_table(dataset)
 splits = gold_splitter.get_split_indices(
     split_table, selection_key="selected", idx_key="idx"

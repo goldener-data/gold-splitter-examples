@@ -4,6 +4,7 @@ gold_splitter:
   batch_size: 128
   num_workers: 15
   table_name: cifar10_ten_percent_dinov3small_224
+  update_selection: False
 
 # Experiment settings
 split_method: gold  # Options: random, gold, or both

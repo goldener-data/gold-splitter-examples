@@ -59,8 +59,12 @@ def get_gold_splitter(
     )
 
     to_keep_schema = {"label": pxt.String}
+
+    if splitter_config.update_selection:
+        pxt.drop_table(table_name, if_not_exists="ignore")
+
     descriptor = GoldDescriptor(
-        table_path=f"{table_name}_describe",
+        table_path=table_name,
         extractor=extractor,
         vectorizer=TensorVectorizer(
             keep=Filter2DWithCount(keep=True, filter_location=FilterLocation.START),
@@ -75,7 +79,7 @@ def get_gold_splitter(
     )
 
     selector = GoldSelector(
-        table_path=f"{table_name}_describe",
+        table_path=table_name,
         vectorized_key="features",
         class_key="label",
         to_keep_schema=to_keep_schema,
