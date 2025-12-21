@@ -12,51 +12,55 @@ The experiment uses:
 - MLFlow for experiment tracking
 - AUROC metric on validation set for model selection
 """
-
+import logging
 import os
 from logging import getLogger
 
 import hydra
 from omegaconf import DictConfig
+import pixeltable as pxt
 from lightning import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
 
 
-from image_classification_cifar10_cnn.data import CIFAR10DataModule
-from image_classification_cifar10_cnn.model import DinoLinearProbing
+from image_classification_cifar10.data import CIFAR10DataModule
+from image_classification_cifar10.model import DinoLinearProbing
 
 
 logger = getLogger(__name__)
+
+pxt.configure_logging(
+    to_stdout=True,
+    level=logging.WARNING,
+    remove="goldener"
+)
 
 
 def run_experiment(
     cfg: DictConfig,
     split_method: str = "random",
 ) -> dict:
-    # Set random seeds for reproducibility
     seed_everything(cfg.random_state, workers=True)
 
-    # Initialize data module
     data_module = CIFAR10DataModule(
         cfg=cfg,
         split_method=split_method,
     )
 
-    # Initialize model
     model = DinoLinearProbing(num_classes=10, learning_rate=cfg.learning_rate)
 
-    # Setup MLFlow logger
     mlflow_logger = MLFlowLogger(
         experiment_name=cfg.mlflow_experiment_name,
         tracking_uri=cfg.mlflow_tracking_uri,
-        run_name=f"cifar10_{split_method}_split",
+        run_name=f"{cfg.mlflow_run_name}_{split_method}",
     )
 
     # Log additional parameters
     mlflow_logger.log_hyperparams(
         {
             "split_method": split_method,
+            "train_ratio": cfg.train_ratio,
             "val_ratio": cfg.val_ratio,
             "max_epochs": cfg.max_epochs,
             "batch_size": cfg.batch_size,

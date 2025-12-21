@@ -2,7 +2,7 @@ import timm
 from lightning import LightningModule
 import torch
 from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRSchedulerConfig
-from timm.models import VisionTransformer
+from timm.models import VisionTransformer, Eva
 from torch import nn as nn
 from torch.nn import functional as F
 from torchmetrics.classification import MulticlassAUROC
@@ -13,19 +13,31 @@ class DinoLinearProbing(LightningModule):
         self,
         num_classes: int = 10,
         learning_rate: float = 0.001,
+        hidden_dims: list[int] | None = None,
     ) -> None:
         super().__init__()
         self.learning_rate = learning_rate
         self.num_classes = num_classes
 
         self.vit = timm.create_model(
-            "vit_base_patch14_reg4_dinov2.lvd142m",
+            "vit_small_patch16_dinov3.lvd1689m",
             pretrained=True,
-            img_size=28,
+            img_size=224,
         )
 
-        assert isinstance(self.vit, VisionTransformer)
-        self.head = nn.Linear(self.vit.patch_embed.proj.out_channels, num_classes)
+        assert isinstance(self.vit, VisionTransformer) or isinstance(self.vit, Eva)
+
+        if hidden_dims is None or len(hidden_dims) == 0:
+            self.head = nn.Linear(self.vit.patch_embed.proj.out_channels, num_classes)
+        else:
+            layers = []
+            input_dim = self.vit.patch_embed.proj.out_channels
+            for hidden_dim in hidden_dims:
+                layers.append(nn.Linear(input_dim, hidden_dim))
+                layers.append(nn.ReLU())
+                input_dim = hidden_dim
+            layers.append(nn.Linear(input_dim, num_classes))
+            self.head = nn.Sequential(*layers)
 
         self.train_auroc = MulticlassAUROC(num_classes=num_classes)
         self.val_auroc = MulticlassAUROC(num_classes=num_classes)
@@ -34,7 +46,7 @@ class DinoLinearProbing(LightningModule):
         self.save_hyperparameters()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        assert isinstance(self.vit, VisionTransformer)
+        assert isinstance(self.vit, VisionTransformer) or isinstance(self.vit, Eva)
         x = self.vit.forward_features(x)
         return self.head(x[:, 0, :])
 

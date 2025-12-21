@@ -8,7 +8,7 @@ license-files= ["LICENSE"]
 authors = [
     {name = "goldener-data", email = "yann.chene.tni@gmail.com"},
 ]
-keywords = ["machine-learning", "data-splitting", "goldener", "pytorch", "deep-learning"]
+keywords = ["machine-learning", "data-splitting", "pytorch", "deep-learning"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -31,12 +31,6 @@ vision = [
     "torchvision",
     "timm",
     "pillow"
-]
-
-dev = [
-    "ruff",
-    "mypy",
-    "pre-commit",
 ]
 
 

@@ -1,8 +1,23 @@
 # gold-split-examples
 
-Different examples using Goldener GoldSplitter during training Machine Learning models.
+Different examples using Goldener GoldSplitter during training Machine Learning models. 
+These examples systematically compares two data splitting strategies for training machine learning models.
+Data splitting is a critical step that can significantly impact model performance and generalization.
+While random splitting is the standard approach, smart splitting strategies like GoldSplitter aim
+to create more balanced and representative train/validation splits, potentially leading to:
 
-## Installation
+- Better model generalization
+- More reliable validation metrics
+- Faster convergence
+- More representative performance estimation
+
+
+Thus, in all the examples, two data splitting strategies for creating training and validation datasets are compared:
+
+1. **Random Split**: Traditional random split using scikit-learn
+2. **Smart Split**: Intelligent split using GoldSplitter from the Goldener library
+
+## Development Setup
 
 This project uses [uv](https://github.com/astral-sh/uv) for dependency management. Install dependencies using:
 
@@ -10,26 +25,11 @@ This project uses [uv](https://github.com/astral-sh/uv) for dependency managemen
 # Install uv if you haven't already
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Sync project dependencies (creates/updates virtual environment)
-uv sync
-
-# Or sync with development dependencies
 uv sync --extra dev
-```
-
-## Development Setup
-
-This project uses pre-commit hooks with ruff and mypy for code quality:
-
-```bash
-# Install dev dependencies
-uv sync --extra dev
-
-# Install pre-commit hooks
 uv run pre-commit install
 
-# Run hooks manually on all files
-uv run pre-commit run --all-files
+# depending on the examples you want to run, you might need to install additional extras, for instance:
+uv sync --extra vision
 ```
 
 The pre-commit hooks will automatically run:
@@ -37,22 +37,19 @@ The pre-commit hooks will automatically run:
 - **mypy**: Type checking
 - Additional checks: trailing whitespace, YAML validation, etc.
 
+## Main dependencies
+
+- [Goldener](https://github.com/goldener-data/goldener): Smart data splitting
+- [scikit-learn](https://scikit-learn.org/): Random uniform data splitting
+- [PyTorch](https://pytorch.org/): Neural networks building blocks/losses and data loading
+- [Pytorch Lightning](https://www.pytorchlightning.ai/): Neural network training and evaluation framework
+- [Torchmetrics](https://torchmetrics.readthedocs.io/): Model evaluation metrics
+- [Mlflow](https://mlflow.org/): Experiment tracking
+- [Hydra](https://hydra.cc/): Configuration management
+
 ## Examples
 
-### 1. Image Classification: CIFAR-10 with CNN
-
-**Location**: [`image_classification_cifar10_cnn/`](image_classification_cifar10_cnn/)
-
-This experiment compares two data splitting strategies for training a CNN on CIFAR-10:
-- **Random Split**: Traditional random split using scikit-learn
-- **Smart Split**: Intelligent split using GoldSplitter from the Goldener library
-
-**Key Features**:
-- Simple CNN model (3 conv layers + 2 FC layers)
-- PyTorch Lightning for training
-- Hydra for configuration management
-- MLFlow for experiment tracking
-- AUROC-based model selection
+### 1. Image Classification: CIFAR-10 with linear probing from DinoV3 ViT-S
 
 **Quick Start**:
 ```bash
@@ -60,12 +57,13 @@ This experiment compares two data splitting strategies for training a CNN on CIF
 uv sync --extra vision
 
 # Run experiment
-cd image_classification_cifar10_cnn
+cd image_classification_cifar10
 uv run python cifar10_experiment.py
 ```
 
-See the [detailed README](image_classification_cifar10_cnn/README.md) for more information.
+See the [detailed README](image_classification_cifar10/README.md) for more information.
 
 ## About Goldener
 
-Goldener provides intelligent data splitting strategies that aim to create more balanced and representative train/validation splits compared to traditional random splitting.
+Goldener provides intelligent data splitting strategies that aim to create 
+more balanced and representative train/validation splits compared to traditional random splitting.
