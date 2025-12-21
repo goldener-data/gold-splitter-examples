@@ -45,7 +45,7 @@ class GoldCifar10(CIFAR10):
     def __getitem__(self, index: int) -> Tuple:
         if self.count is not None and index >= self.count:
             raise IndexError(
-                "Index out of range for GoldSplitterCifar10 with limited count."
+                "Index out of range for GoldCifar10 with limited count."
             )
         return super().__getitem__(index)
 
@@ -75,7 +75,6 @@ class CIFAR10DataModule(LightningDataModule):
             if cfg["debug_train_count"] is not None
             else None
         )
-        self.split_exists = cfg["split_exists"]
 
         # Define transforms
         self.transform_test = Compose(
@@ -158,7 +157,7 @@ class CIFAR10DataModule(LightningDataModule):
                 val_ratio = self.val_ratio / (self.train_ratio + self.val_ratio)
 
                 train_indices, val_indices = train_test_split(
-                    np.arange(len(training_indices)),
+                    training_indices,
                     test_size=int(val_ratio * len(training_indices)),
                     random_state=self.random_state,
                     shuffle=True,

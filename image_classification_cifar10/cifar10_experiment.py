@@ -13,9 +13,8 @@ The experiment uses:
 - AUROC metric on validation set for model selection
 """
 
-import logging
 import os
-from logging import getLogger
+from logging import getLogger, WARNING
 
 import hydra
 from omegaconf import DictConfig
@@ -26,12 +25,12 @@ from lightning.pytorch.loggers import MLFlowLogger
 
 
 from image_classification_cifar10.data import CIFAR10DataModule
-from image_classification_cifar10.model import DinoLinearProbing
+from image_classification_cifar10.model import Cifar10DinoV3ViTSmall
 
 
 logger = getLogger(__name__)
 
-pxt.configure_logging(to_stdout=True, level=logging.WARNING, remove="goldener")
+pxt.configure_logging(to_stdout=True, level=WARNING, remove="goldener")
 
 
 def run_experiment(
@@ -45,7 +44,7 @@ def run_experiment(
         split_method=split_method,
     )
 
-    model = DinoLinearProbing(num_classes=10, learning_rate=cfg.learning_rate)
+    model = Cifar10DinoV3ViTSmall(learning_rate=cfg.learning_rate)
 
     mlflow_logger = MLFlowLogger(
         experiment_name=cfg.mlflow_experiment_name,

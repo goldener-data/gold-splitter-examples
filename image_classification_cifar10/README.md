@@ -1,7 +1,7 @@
 # CIFAR-10 Split Comparison Experiment
 
 This experiment compares the two data splitting strategies for training 
-a Linear Probing on Dinov3 ViT-S on the CIFAR-10 dataset. 
+a ViT-S pretrained with DinoV3 on the CIFAR-10 dataset. 
 
 
 ## Table of Contents
@@ -26,8 +26,8 @@ but as well as the data split method to use and the settings for the GoldSplitte
 (50,000 training images, 10,000 test images). Depending on the configuration, only a subset of the 
 training images is used for training/validation.
 
-- **DinoLinearProbing**: A specific Pytorch Lightning LightningModule allowing to train and evaluate a Dinov3 ViT-S from Timm 
-with a linear probing head leveraging the final class token to make image classification.
+- **Cifar10DinoV3ViTSmall**: A specific Pytorch Lightning LightningModule allowing to train and evaluate a Dinov3 ViT-S from Timm 
+to make image classification for the CIFAR-p10 dataset.
 
 - **Trainer**: PyTorch Lightning Trainer for efficient training management allowing to handle training, validation and 
 testing loops. It allows as well to checkpoint the best model based on validation AUROC metric.
@@ -60,7 +60,7 @@ Then navigate to `http://localhost:5000` in your browser.
 - **Classes**: 10 object categories (airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck)
 - **Training samples**: 50,000 images (5000 per class)
 - **Test samples**: 10,000 images
-- **Image size**: intially 32×32 pixels but resized to 224×224, RGB color
+- **Image size**: initially 32×32 pixels but resized to 224×224, RGB color
 
 ### Data Preprocessing
 
@@ -147,7 +147,7 @@ train_indices, val_indices = train_test_split(
 
 **Characteristics**:
 - Uniform probability for each sample
-- Selection for each class
+- Stratified selection to preserve class proportions per split
 - Standard practice in ML
 - Simple and fast
 
@@ -198,4 +198,4 @@ Dependencies are managed at the repository root level in `pyproject.toml`.
 
 - [Timm](https://huggingface.co/timm): Dinov3 ViT-S model
 - [Torchvision](https://pytorch.org/vision/stable/index.html): CIFAR-10 dataset and transforms
-- [Pillow](https://python-pillow.org/): Image laoding
+- [Pillow](https://python-pillow.org/): Image loading

@@ -17,19 +17,21 @@ from goldener.vectorize import (
 from omegaconf import DictConfig
 from torchvision.transforms.v2 import Compose, ToTensor, Normalize, Resize
 
+CIFAR10_PREPROCESS = Compose(
+    [
+        ToTensor(),
+        Resize(224),
+        Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
+    ]
+)
+
 
 def collate_cifar10(
     batch: list[tuple[Image, int]],
 ) -> dict[str, torch.Tensor | list[str]]:
-    preprocess = Compose(
-        [
-            ToTensor(),
-            Resize(224),
-            Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
-        ]
-    )
+
     images, targets = zip(*batch)
-    imgs_tensor = torch.stack([preprocess(image) for image in images])
+    imgs_tensor = torch.stack([CIFAR10_PREPROCESS(image) for image in images])
     str_targets = [str(target) for target in targets]
     return {"data": imgs_tensor, "label": str_targets}
 

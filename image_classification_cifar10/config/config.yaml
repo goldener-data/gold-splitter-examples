@@ -14,7 +14,7 @@ val_ratio: 0.03
 max_epochs: 100
 batch_size: 128
 learning_rate: 0.001
-num_workers: 128
+num_workers: 15
 random_state: 42
 
 # Data settings
@@ -25,9 +25,6 @@ mlflow_tracking_uri: mlruns
 mlflow_experiment_name: cifar10-10percent
 mlflow_run_name: DinoV3Small-224
 
-# pixeltable
-split_exists: False  # Set to True if splits are precomputed and saved
-
-  # Debug settings
+# Debug settings
 debug_count: null  # Set to a number (e.g., 5) to limit validation/test batches for debugging. null = no limit
 debug_train_count: null  # Set to a number (e.g., 10) to limit training batches for debugging. null = no limit
