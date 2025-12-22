@@ -48,7 +48,7 @@ class GoldCifar10(CIFAR10):
     def __getitem__(self, index: int) -> Tuple:
         if self.count is not None and index >= self.count:
             raise IndexError("Index out of range for GoldCifar10 with limited count.")
-        return super().__getitem__(index)
+        return super().__getitem__(index) + (index,)
 
     @property
     def targets_as_array(self) -> np.ndarray:
@@ -139,20 +139,16 @@ class CIFAR10DataModule(LightningDataModule):
             )
 
     def _split_data(self, dataset) -> Tuple[np.ndarray, np.ndarray]:
-        gold_splitter = get_gold_splitter(
-            splitter_cfg=self.gold_splitter_cfg,
-            train_ratio=self.train_ratio,
-            val_ratio=self.val_ratio,
-            max_batches=self.max_batches,
-        )
-        split_table = gold_splitter.split_in_table(dataset)
-        splits = gold_splitter.get_split_indices(
-            split_table, selection_key="selected", idx_key="idx"
+        training_indices, excluded = train_test_split(
+            range(len(dataset)),
+            test_size=len(dataset) * 0.1,
+            random_state=self.random_state,
+            shuffle=True,
+            stratify=dataset.targets_as_array,
         )
 
         if self.split_method == "random":
             val_ratio = self.val_ratio / (self.train_ratio + self.val_ratio)
-            training_indices = np.array(list(splits["train"]) + list(splits["val"]))
             train_indices, val_indices = train_test_split(
                 training_indices,
                 test_size=int(val_ratio * len(training_indices)),
@@ -161,6 +157,18 @@ class CIFAR10DataModule(LightningDataModule):
                 stratify=dataset.targets_as_array[training_indices],
             )
         elif self.split_method == "gold":
+            sub_dataset = Subset(dataset, training_indices)
+            gold_splitter = get_gold_splitter(
+                splitter_cfg=self.gold_splitter_cfg,
+                train_ratio=self.train_ratio,
+                val_ratio=self.val_ratio,
+                max_batches=self.max_batches,
+            )
+            split_table = gold_splitter.split_in_table(sub_dataset)
+            splits = gold_splitter.get_split_indices(
+                split_table, selection_key="selected", idx_key="idx"
+            )
+
             train_indices = np.array(list(splits["train"]))
             val_indices = np.array(list(splits["val"]))
         else:

@@ -27,12 +27,17 @@ CIFAR10_PREPROCESS = Compose(
 
 
 def collate_cifar10(
-    batch: list[tuple[Image, int]],
-) -> dict[str, torch.Tensor | list[str]]:
-    images, targets = zip(*batch)
+    batch: list[tuple[Image, int, int]],
+) -> dict[str, torch.Tensor | list[str] | list[int]]:
+    images, targets, indices = zip(*batch)
     imgs_tensor = torch.stack([CIFAR10_PREPROCESS(image) for image in images])
     str_targets = [str(target) for target in targets]
-    return {"data": imgs_tensor, "label": str_targets}
+    idx_list = [int(idx) for idx in indices]
+    return {
+        "data": imgs_tensor,
+        "label": str_targets,
+        "idx": idx_list,
+    }
 
 
 def get_gold_splitter(
