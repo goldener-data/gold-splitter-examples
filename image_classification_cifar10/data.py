@@ -47,9 +47,7 @@ class GoldCifar10(CIFAR10):
 
     def __getitem__(self, index: int) -> Tuple:
         if self.count is not None and index >= self.count:
-            raise IndexError(
-                "Index out of range for GoldCifar10 with limited count."
-            )
+            raise IndexError("Index out of range for GoldCifar10 with limited count.")
         return super().__getitem__(index)
 
     @property

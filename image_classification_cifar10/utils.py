@@ -29,7 +29,6 @@ CIFAR10_PREPROCESS = Compose(
 def collate_cifar10(
     batch: list[tuple[Image, int]],
 ) -> dict[str, torch.Tensor | list[str]]:
-
     images, targets = zip(*batch)
     imgs_tensor = torch.stack([CIFAR10_PREPROCESS(image) for image in images])
     str_targets = [str(target) for target in targets]

@@ -2,7 +2,7 @@ import timm
 from lightning import LightningModule
 import torch
 from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRSchedulerConfig
-from timm.models import VisionTransformer, Eva
+from timm.models import Eva
 from torch import nn as nn
 from torch.nn import functional as F
 from torchmetrics.classification import MulticlassAUROC
@@ -21,7 +21,6 @@ class Cifar10DinoV3ViTSmall(LightningModule):
             pretrained=True,
             img_size=224,
             num_classes=10,
-
         )
         assert isinstance(self.vit, Eva)
 
