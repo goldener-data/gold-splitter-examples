@@ -151,10 +151,11 @@ class CIFAR10DataModule(LightningDataModule):
         )
 
         if self.split_method == "random":
+            val_ratio = self.val_ratio / (self.train_ratio + self.val_ratio)
             training_indices = np.array(list(splits["train"]) + list(splits["val"]))
             train_indices, val_indices = train_test_split(
                 training_indices,
-                test_size=int(self.val_ratio * len(training_indices)),
+                test_size=int(val_ratio * len(training_indices)),
                 random_state=self.random_state,
                 shuffle=True,
                 stratify=dataset.targets_as_array[training_indices],
