@@ -12,6 +12,9 @@ from torchvision.transforms.v2 import (
     Normalize,
     ToTensor,
     RandomHorizontalFlip,
+    RandomVerticalFlip,
+    RandomRotation,
+    ColorJitter,
     Resize,
 )
 from sklearn.model_selection import train_test_split
@@ -87,6 +90,9 @@ class CIFAR10DataModule(LightningDataModule):
         self.transform_train = Compose(
             [
                 RandomHorizontalFlip(),
+                RandomVerticalFlip(),
+                RandomRotation(degrees=15),
+                ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
             ]
             + list(self.transform_test.transforms)
         )
@@ -135,45 +141,27 @@ class CIFAR10DataModule(LightningDataModule):
             )
 
     def _split_data(self, dataset) -> Tuple[np.ndarray, np.ndarray]:
+        gold_splitter = get_gold_splitter(
+            splitter_cfg=self.gold_splitter_cfg,
+            train_ratio=self.train_ratio,
+            val_ratio=self.val_ratio,
+            max_batches=self.max_batches,
+        )
+        split_table = gold_splitter.split_in_table(dataset)
+        splits = gold_splitter.get_split_indices(
+            split_table, selection_key="selected", idx_key="idx"
+        )
+
         if self.split_method == "random":
-            total_ratio = self.train_ratio + self.val_ratio
-
-            if total_ratio >= 1.0:
-                train_indices, val_indices = train_test_split(
-                    np.arange(len(dataset)),
-                    test_size=int(self.val_ratio * len(dataset)),
-                    random_state=self.random_state,
-                    shuffle=True,
-                    stratify=dataset.targets_as_array,
-                )
-            else:
-                training_indices, excluded_indices = train_test_split(
-                    np.arange(len(dataset)),
-                    test_size=int((1 - total_ratio) * len(dataset)),
-                    random_state=self.random_state,
-                    shuffle=True,
-                    stratify=dataset.targets_as_array,
-                )
-                val_ratio = self.val_ratio / (self.train_ratio + self.val_ratio)
-
-                train_indices, val_indices = train_test_split(
-                    training_indices,
-                    test_size=int(val_ratio * len(training_indices)),
-                    random_state=self.random_state,
-                    shuffle=True,
-                    stratify=dataset.targets_as_array[training_indices],
-                )
+            training_indices = np.array(list(splits["train"]) + list(splits["val"]))
+            train_indices, val_indices = train_test_split(
+                training_indices,
+                test_size=int(self.val_ratio * len(training_indices)),
+                random_state=self.random_state,
+                shuffle=True,
+                stratify=dataset.targets_as_array[training_indices],
+            )
         elif self.split_method == "gold":
-            gold_splitter = get_gold_splitter(
-                splitter_cfg=self.gold_splitter_cfg,
-                train_ratio=self.train_ratio,
-                val_ratio=self.val_ratio,
-                max_batches=self.max_batches,
-            )
-            split_table = gold_splitter.split_in_table(dataset)
-            splits = gold_splitter.get_split_indices(
-                split_table, selection_key="selected", idx_key="idx"
-            )
             train_indices = np.array(list(splits["train"]))
             val_indices = np.array(list(splits["val"]))
         else:
