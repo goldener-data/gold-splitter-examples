@@ -34,9 +34,9 @@ class Cifar10DinoV3ViTSmall(LightningModule):
         return self.vit(x)
 
     def training_step(
-        self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
+        self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> STEP_OUTPUT:
-        x, y = batch
+        x, y, _ = batch
         logits = self(x)
         loss = F.cross_entropy(logits, y)
 
@@ -60,9 +60,9 @@ class Cifar10DinoV3ViTSmall(LightningModule):
         self.train_auroc.reset()
 
     def validation_step(
-        self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
+        self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> STEP_OUTPUT:
-        x, y = batch
+        x, y, _ = batch
         logits = self(x)
         loss = F.cross_entropy(logits, y)
 

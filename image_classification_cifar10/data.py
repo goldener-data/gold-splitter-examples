@@ -117,7 +117,7 @@ class CIFAR10DataModule(LightningDataModule):
         if stage == "fit" or stage is None:
             train_indices, val_indices = self._split_data(full_train_dataset)
             self.train_dataset = Subset(
-                dataset=full_train_dataset, indices=train_indices.tolist()
+                dataset=full_train_dataset, indices=train_indices
             )
             self.val_dataset = Subset(
                 dataset=GoldCifar10(
@@ -127,7 +127,7 @@ class CIFAR10DataModule(LightningDataModule):
                     download=False,
                     count=self.train_count,
                 ),
-                indices=val_indices.tolist(),
+                indices=val_indices,
             )
 
         if stage == "test" or stage is None:
@@ -138,10 +138,10 @@ class CIFAR10DataModule(LightningDataModule):
                 download=False,
             )
 
-    def _split_data(self, dataset) -> Tuple[np.ndarray, np.ndarray]:
+    def _split_data(self, dataset) -> Tuple[list[int], list[int]]:
         training_indices, excluded = train_test_split(
             range(len(dataset)),
-            test_size=len(dataset) * 0.1,
+            test_size=0.9,
             random_state=self.random_state,
             shuffle=True,
             stratify=dataset.targets_as_array,
@@ -169,8 +169,8 @@ class CIFAR10DataModule(LightningDataModule):
                 split_table, selection_key="selected", idx_key="idx"
             )
 
-            train_indices = np.array(list(splits["train"]))
-            val_indices = np.array(list(splits["val"]))
+            train_indices = list(splits["train"])
+            val_indices = list(splits["val"])
         else:
             raise ValueError(f"Unknown split method: {self.split_method}")
 
