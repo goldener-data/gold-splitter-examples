@@ -62,6 +62,7 @@ def run_experiment(
             "batch_size": cfg.batch_size,
             "learning_rate": cfg.learning_rate,
             "random_state": cfg.random_state,
+            "random_split_state": cfg.random_split_state,
         }
     )
 
