@@ -69,6 +69,7 @@ class CIFAR10DataModule(LightningDataModule):
         self.split_method = split_method
         self.val_ratio = cfg["val_ratio"]
         self.random_state = cfg["random_state"]
+        self.random_split_state = cfg["random_split_state"]
         self.gold_splitter_cfg = cfg["gold_splitter"]
         self.max_batches = cfg["debug_train_count"]
         self.train_count = (
@@ -148,11 +149,10 @@ class CIFAR10DataModule(LightningDataModule):
         )
 
         if self.split_method == "random":
-            val_ratio = self.val_ratio / (self.train_ratio + self.val_ratio)
             train_indices, val_indices = train_test_split(
                 training_indices,
-                test_size=int(val_ratio * len(training_indices)),
-                random_state=self.random_state,
+                test_size=int(self.val_ratio * len(training_indices)),
+                random_state=self.random_split_state,
                 shuffle=True,
                 stratify=dataset.targets_as_array[training_indices],
             )

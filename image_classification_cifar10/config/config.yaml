@@ -8,14 +8,15 @@ gold_splitter:
 
 # Experiment settings
 split_method: gold  # Options: random, gold, or both
-train_ratio: 0.07
-val_ratio: 0.03
+train_ratio: 0.7
+val_ratio: 0.3
 
 max_epochs: 50
 batch_size: 128
 learning_rate: 0.001
 num_workers: 15
 random_state: 42
+random_split_state: 42
 
 # Data settings
 data_dir: data
