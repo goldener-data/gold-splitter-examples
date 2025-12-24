@@ -77,6 +77,7 @@ class CIFAR10DataModule(LightningDataModule):
             if cfg["debug_train_count"] is not None
             else None
         )
+        self.validate_on_test = cfg["validate_on_test"]
 
         # Define transforms
         self.transform_test = Compose(
@@ -120,15 +121,24 @@ class CIFAR10DataModule(LightningDataModule):
             self.train_dataset = Subset(
                 dataset=full_train_dataset, indices=train_indices
             )
-            self.val_dataset = Subset(
-                dataset=GoldCifar10(
+            self.val_dataset = (
+                Subset(
+                    dataset=GoldCifar10(
+                        root=self.data_dir,
+                        train=True,
+                        transform=self.transform_test,
+                        download=False,
+                        count=self.train_count,
+                    ),
+                    indices=val_indices,
+                )
+                if not self.validate_on_test
+                else torchvision.datasets.CIFAR10(
                     root=self.data_dir,
-                    train=True,
+                    train=False,
                     transform=self.transform_test,
                     download=False,
-                    count=self.train_count,
-                ),
-                indices=val_indices,
+                )
             )
 
         if stage == "test" or stage is None:

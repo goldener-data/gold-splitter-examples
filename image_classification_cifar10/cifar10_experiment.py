@@ -134,7 +134,10 @@ def main(cfg: DictConfig):
 
     # Run experiments based on split method argument
     if cfg.split_method == "both":
-        split_methods = ["random", "gold"]
+        split_methods = [
+            "gold",
+            "random",
+        ]
     else:
         split_methods = [cfg.split_method]
 

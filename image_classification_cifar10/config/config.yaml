@@ -17,8 +17,7 @@ learning_rate: 0.001
 num_workers: 15
 random_state: 42
 random_split_state: 42
-
-# Data settings
+validate_on_test: False
 data_dir: data
 
 # MLFlow settings
