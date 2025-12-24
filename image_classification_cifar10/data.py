@@ -133,7 +133,7 @@ class CIFAR10DataModule(LightningDataModule):
                     indices=val_indices,
                 )
                 if not self.validate_on_test
-                else torchvision.datasets.CIFAR10(
+                else GoldCifar10(
                     root=self.data_dir,
                     train=False,
                     transform=self.transform_test,
