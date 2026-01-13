@@ -40,17 +40,16 @@ def collate_cifar10(
     }
 
 
-def get_gold_splitter(
-    splitter_cfg: DictConfig, train_ratio: float, val_ratio: float, max_batches: int
-) -> GoldSplitter:
-    splitter_config = hydra.utils.instantiate(splitter_cfg)
+def get_gold_descriptor(
+    table_name: str,
+    min_pxt_insert_size: int,
+    batch_size: int,
+    num_workers: int,
+    to_keep_schema: dict,
+) -> GoldDescriptor:
     device = (
         torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
     )
-    batch_size = splitter_config["batch_size"]
-    num_workers = splitter_config["num_workers"]
-    min_pxt_insert_size = splitter_config["min_pxt_insert_size"]
-    table_name = splitter_config["table_name"]
 
     extractor = TorchGoldFeatureExtractor(
         TorchGoldFeatureExtractorConfig(
@@ -60,16 +59,11 @@ def get_gold_splitter(
                 img_size=224,
                 device=device,
             ),
-            layers=["blocks.9"],
+            layers=["blocks.11"],
         )
     )
 
-    to_keep_schema = {"label": pxt.String}
-
-    if splitter_config.update_selection:
-        pxt.drop_table(table_name, if_not_exists="ignore")
-
-    descriptor = GoldDescriptor(
+    return GoldDescriptor(
         table_path=table_name,
         extractor=extractor,
         vectorizer=TensorVectorizer(
@@ -84,6 +78,30 @@ def get_gold_splitter(
         device=device,
     )
 
+
+def get_gold_splitter(
+    splitter_cfg: DictConfig,
+    train_ratio: float,
+    val_ratio: float,
+    max_batches: int | None = None,
+) -> GoldSplitter:
+    splitter_config = hydra.utils.instantiate(splitter_cfg)
+
+    batch_size = splitter_config["batch_size"]
+    num_workers = splitter_config["num_workers"]
+    min_pxt_insert_size = splitter_config["min_pxt_insert_size"]
+    table_name = splitter_config["table_name"]
+
+    to_keep_schema = {"label": pxt.String}
+
+    descriptor = get_gold_descriptor(
+        table_name=table_name,
+        min_pxt_insert_size=min_pxt_insert_size,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        to_keep_schema=to_keep_schema,
+    )
+
     selector = GoldSelector(
         table_path=table_name,
         vectorized_key="features",
@@ -94,8 +112,8 @@ def get_gold_splitter(
     )
 
     sets = [
-        GoldSet(name="train", ratio=train_ratio),
         GoldSet(name="val", ratio=val_ratio),
+        GoldSet(name="train", ratio=train_ratio),
     ]
 
     return GoldSplitter(

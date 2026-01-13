@@ -23,7 +23,7 @@ data_dir: data
 # MLFlow settings
 mlflow_tracking_uri: mlruns
 mlflow_experiment_name: cifar10-10percent
-mlflow_run_name: DinoV3Small-224
+mlflow_run_name: DinoV3Small-224-block11
 
 # Debug settings
 debug_count: null  # Set to a number (e.g., 5) to limit validation/test batches for debugging. null = no limit

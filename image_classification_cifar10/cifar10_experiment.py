@@ -41,7 +41,6 @@ def run_experiment(
 
     data_module = CIFAR10DataModule(
         cfg=cfg,
-        split_method=split_method,
     )
 
     model = Cifar10DinoV3ViTSmall(learning_rate=cfg.learning_rate)
@@ -97,7 +96,19 @@ def run_experiment(
     logger.info(f"Training with {split_method.upper()} split method")
     logger.info(f"{'=' * 60}\n")
 
-    trainer.fit(model, data_module)
+    train_dataloader = (
+        data_module.sk_train_dataloader()
+        if split_method == "random"
+        else data_module.gold_train_dataloader()
+    )
+    val_dataloader = (
+        data_module.sk_val_dataloader()
+        if split_method == "random"
+        else data_module.gold_val_dataloader()
+    )
+    trainer.fit(
+        model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader
+    )
 
     # Test the model
     test_results = trainer.test(model, data_module, ckpt_path="best")
