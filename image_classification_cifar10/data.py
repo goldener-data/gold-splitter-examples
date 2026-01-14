@@ -4,6 +4,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import Tuple, Callable, Literal
 
+import torch
 from lightning import LightningDataModule
 import numpy as np
 from omegaconf import DictConfig
@@ -86,6 +87,8 @@ class GoldCifar10(CIFAR10):
             pxt.drop_table(gold_descriptor.table_path, if_not_exists="ignore")
 
             vectorized = gold_descriptor.describe_in_table(self)
+
+            torch.cuda.empty_cache()
             features_per_label = defaultdict(list)
             indices_per_label = defaultdict(list)
 

@@ -14,6 +14,7 @@ The experiment uses:
 """
 
 import os
+import time
 from logging import getLogger, WARNING
 
 import hydra
@@ -58,6 +59,7 @@ def run_experiment(
             "random_state": cfg.random_state,
             "random_split_state": cfg.random_split_state,
             "vectorized_path": data_module.gold_splitter.descriptor.table_path,
+            "splitting_duration": cfg["splitting duration"],
         }
     )
 
@@ -153,12 +155,13 @@ def main(cfg: DictConfig):
 
     seed_everything(cfg.random_state, workers=True)
 
+    starts = time.monotonic()
     data_module = CIFAR10DataModule(
         cfg=cfg,
     )
     data_module.prepare_data()
     data_module.setup(stage="fit")
-
+    cfg["splitting duration"] = time.monotonic() - starts
     # Run experiments based on split method argument
     if cfg.split_method == "both":
         split_methods = [
