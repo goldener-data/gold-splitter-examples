@@ -35,14 +35,9 @@ pxt.configure_logging(to_stdout=True, level=WARNING, remove="goldener")
 
 def run_experiment(
     cfg: DictConfig,
+    data_module: CIFAR10DataModule,
     split_method: str = "random",
 ) -> dict:
-    seed_everything(cfg.random_state, workers=True)
-
-    data_module = CIFAR10DataModule(
-        cfg=cfg,
-    )
-
     model = Cifar10DinoV3ViTSmall(learning_rate=cfg.learning_rate)
 
     mlflow_logger = MLFlowLogger(
@@ -62,7 +57,18 @@ def run_experiment(
             "learning_rate": cfg.learning_rate,
             "random_state": cfg.random_state,
             "random_split_state": cfg.random_split_state,
+            "vectorized_path": data_module.gold_splitter.descriptor.table_path,
         }
+    )
+
+    mlflow_logger.experiment.log_dict(
+        {
+            "gold_train_indices": data_module.gold_train_indices,
+            "gold_val_indices": data_module.gold_val_indices,
+            "sk_train_indices": data_module.sk_train_indices,
+            "sk_val_indices": data_module.sk_val_indices,
+        },
+        "indices.json",
     )
 
     # Setup callbacks
@@ -84,7 +90,7 @@ def run_experiment(
         devices=1,
         logger=mlflow_logger,
         callbacks=[checkpoint_callback],
-        deterministic=True,
+        deterministic=False,
         log_every_n_steps=50,
         limit_train_batches=debug_train_count if debug_train_count is not None else 1.0,
         limit_val_batches=debug_count if debug_count is not None else 1.0,
@@ -111,6 +117,8 @@ def run_experiment(
     )
 
     # Test the model
+    data_module.setup(stage="test")
+
     test_results = trainer.test(model, data_module, ckpt_path="best")
 
     logger.info(f"\n{'=' * 60}")
@@ -143,6 +151,14 @@ def main(cfg: DictConfig):
 
     results = []
 
+    seed_everything(cfg.random_state, workers=True)
+
+    data_module = CIFAR10DataModule(
+        cfg=cfg,
+    )
+    data_module.prepare_data()
+    data_module.setup(stage="fit")
+
     # Run experiments based on split method argument
     if cfg.split_method == "both":
         split_methods = [
@@ -155,6 +171,7 @@ def main(cfg: DictConfig):
     for split_method in split_methods:
         result = run_experiment(
             split_method=split_method,
+            data_module=data_module,
             cfg=cfg,
         )
         results.append(result)
