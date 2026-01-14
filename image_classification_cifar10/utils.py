@@ -112,8 +112,8 @@ def get_gold_splitter(
     )
 
     sets = [
-        GoldSet(name="val", ratio=val_ratio),
-        GoldSet(name="train", ratio=train_ratio),
+        GoldSet(name="val", size=val_ratio),
+        GoldSet(name="train", size=train_ratio),
     ]
 
     return GoldSplitter(
