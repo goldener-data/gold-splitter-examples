@@ -11,14 +11,21 @@ split_method: gold  # Options: random, gold, or both
 train_ratio: 0.7
 val_ratio: 0.3
 
+data_dir: .data
+
+random_state: 42
+remove_ratio: 0.9
+to_duplicate_clusters: 4
+cluster_count: 50
+duplicate_per_sample: 25
+
+random_split_state: 42
+
 max_epochs: 50
 batch_size: 128
 learning_rate: 0.001
 num_workers: 15
-random_state: 42
-random_split_state: 42
 validate_on_test: False
-data_dir: .data
 
 # MLFlow settings
 mlflow_tracking_uri: mlruns

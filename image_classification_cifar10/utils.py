@@ -81,6 +81,7 @@ def get_gold_descriptor(
 
 def get_gold_splitter(
     splitter_cfg: DictConfig,
+    name_prefix: str,
     train_ratio: float,
     val_ratio: float,
     max_batches: int | None = None,
@@ -90,12 +91,13 @@ def get_gold_splitter(
     batch_size = splitter_config["batch_size"]
     num_workers = splitter_config["num_workers"]
     min_pxt_insert_size = splitter_config["min_pxt_insert_size"]
+
     table_name = splitter_config["table_name"]
 
     to_keep_schema = {"label": pxt.String}
 
     descriptor = get_gold_descriptor(
-        table_name=table_name,
+        table_name=f"{name_prefix}_{table_name}",
         min_pxt_insert_size=min_pxt_insert_size,
         batch_size=batch_size,
         num_workers=num_workers,

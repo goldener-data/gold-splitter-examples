@@ -45,10 +45,10 @@ class GoldCifar10(CIFAR10):
         target_transform: None | Callable = None,
         download: bool = False,
         count: int | None = None,
-        remove: float | None = None,
+        remove_ratio: float | None = None,
         to_duplicate_clusters: int | None = None,
-        k: int | None = None,
-        duplicate: int | None = None,
+        cluster_count: int | None = None,
+        duplicate_per_sample: int | None = None,
         random_state: int = 42,
     ) -> None:
         self.count = count
@@ -64,10 +64,10 @@ class GoldCifar10(CIFAR10):
             self.data: np.ndarray = self.data[:count]
             self.targets: list[int] = self.targets[:count]
 
-        if remove is not None:
+        if remove_ratio is not None:
             training_indices, excluded = train_test_split(
                 range(len(self)),
-                test_size=remove,
+                test_size=remove_ratio,
                 random_state=random_state,
                 shuffle=True,
                 stratify=self.targets_as_array,
@@ -75,7 +75,7 @@ class GoldCifar10(CIFAR10):
             self.data = self.data[training_indices]
             self.targets = [self.targets[i] for i in training_indices]
 
-        if to_duplicate_clusters is not None and k is not None:
+        if to_duplicate_clusters is not None and cluster_count is not None:
             gold_descriptor = get_gold_descriptor(
                 table_name="gold_cifar10_descriptor",
                 min_pxt_insert_size=10000,
@@ -99,23 +99,23 @@ class GoldCifar10(CIFAR10):
                 label_indices = indices_per_label[label]
                 logger.info(f"Adding duplicates for label {label}")
                 kmeans = KMeans(
-                    n_clusters=k,
+                    n_clusters=cluster_count,
                     random_state=random_state,
                     n_init="auto",
                 ).fit(np.stack(features, axis=0))
                 cluster_indices = np.random.choice(
-                    range(k), size=to_duplicate_clusters, replace=False
+                    range(cluster_count), size=to_duplicate_clusters, replace=False
                 )
                 for ci in cluster_indices:
                     for i, cluster_id in enumerate(kmeans.labels_):
                         if cluster_id == ci:
                             to_add_data = np.vstack(
                                 [self.data[label_indices[i]][np.newaxis, ...]]
-                                * duplicate  # type: ignore[operator]
+                                * duplicate_per_sample  # type: ignore[operator]
                             )
                             self.data = np.vstack([self.data, to_add_data])
                             self.targets.extend(
-                                [self.targets[label_indices[i]]] * duplicate  # type: ignore[operator]
+                                [self.targets[label_indices[i]]] * duplicate_per_sample  # type: ignore[operator]
                             )
 
     def __len__(self) -> int:
@@ -137,14 +137,23 @@ class CIFAR10DataModule(LightningDataModule):
         cfg: DictConfig,
     ) -> None:
         super().__init__()
+
         self.data_dir = cfg["data_dir"]
-        self.batch_size = cfg["batch_size"]
-        self.num_workers = cfg["num_workers"]
+        self.gold_splitter_cfg = cfg["gold_splitter"]
+
+        self.random_state = cfg["random_state"]
+
         self.train_ratio = cfg["train_ratio"]
         self.val_ratio = cfg["val_ratio"]
-        self.random_state = cfg["random_state"]
+
         self.random_split_state = cfg["random_split_state"]
-        self.gold_splitter_cfg = cfg["gold_splitter"]
+        self.remove_ratio = cfg["remove_ratio"]
+        self.to_duplicate_clusters = cfg["remove"]
+        self.cluster_count = cfg["cluster_count"]
+        self.duplicate_per_sample = cfg["duplicate_per_sample"]
+
+        self.batch_size = cfg["batch_size"]
+        self.num_workers = cfg["num_workers"]
         self.max_batches = cfg["debug_train_count"]
         self.train_count = (
             cfg["debug_train_count"] * self.batch_size
@@ -171,6 +180,11 @@ class CIFAR10DataModule(LightningDataModule):
 
         self.gold_splitter: GoldSplitter = get_gold_splitter(
             splitter_cfg=self.gold_splitter_cfg,
+            name_prefix=(
+                f"settings_{self.random_state}_{self.remove_ratio}"
+                f"_{self.cluster_count}_{self.to_duplicate_clusters}"
+                f"_{self.duplicate_per_sample}"
+            ),
             train_ratio=self.train_ratio,
             val_ratio=self.val_ratio,
             max_batches=self.max_batches,
@@ -205,10 +219,10 @@ class CIFAR10DataModule(LightningDataModule):
                 download=False,
                 count=self.train_count,
                 random_state=self.random_state,
-                remove=0.9,
+                remove_ratio=0.9,
                 to_duplicate_clusters=4,
-                k=50,
-                duplicate=25,
+                cluster_count=50,
+                duplicate_per_sample=25,
             )
 
             # make random splitting with sklearn
