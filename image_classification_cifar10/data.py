@@ -151,7 +151,7 @@ class CIFAR10DataModule(LightningDataModule):
 
         self.random_split_state = cfg["random_split_state"]
         self.remove_ratio = cfg["remove_ratio"]
-        self.to_duplicate_clusters = cfg["remove"]
+        self.to_duplicate_clusters = cfg["to_duplicate_clusters"]
         self.cluster_count = cfg["cluster_count"]
         self.duplicate_per_sample = cfg["duplicate_per_sample"]
 
@@ -180,14 +180,15 @@ class CIFAR10DataModule(LightningDataModule):
             ]
             + list(self.transform_test.transforms)
         )
-
+        name_prefix = (
+            f"settings_{self.random_state}_{self.remove_ratio}"
+            f"_{self.cluster_count}_{self.to_duplicate_clusters}"
+            f"_{self.duplicate_per_sample}_{self.gold_splitter_cfg["chunks"]}"
+        )
+        name_prefix = name_prefix.replace(".", "_")
         self.gold_splitter: GoldSplitter = get_gold_splitter(
             splitter_cfg=self.gold_splitter_cfg,
-            name_prefix=(
-                f"settings_{self.random_state}_{self.remove_ratio}"
-                f"_{self.cluster_count}_{self.to_duplicate_clusters}"
-                f"_{self.duplicate_per_sample}"
-            ),
+            name_prefix=name_prefix,
             train_ratio=self.train_ratio,
             val_ratio=self.val_ratio,
             max_batches=self.max_batches,

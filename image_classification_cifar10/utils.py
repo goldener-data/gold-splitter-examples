@@ -4,10 +4,11 @@ import hydra
 import timm
 import torch
 from PIL.Image import Image
+from sklearn.manifold import TSNE
 from goldener.describe import GoldDescriptor
 from goldener.extract import TorchGoldFeatureExtractor, TorchGoldFeatureExtractorConfig
 from goldener.select import GoldSelector
-
+from goldener.reduce import GoldReducer
 from goldener.split import GoldSet, GoldSplitter
 from goldener.vectorize import (
     TensorVectorizer,
@@ -91,6 +92,7 @@ def get_gold_splitter(
     batch_size = splitter_config["batch_size"]
     num_workers = splitter_config["num_workers"]
     min_pxt_insert_size = splitter_config["min_pxt_insert_size"]
+    chunk = splitter_config["chunk"]
 
     table_name = splitter_config["table_name"]
 
@@ -106,8 +108,10 @@ def get_gold_splitter(
 
     selector = GoldSelector(
         table_path=table_name,
+        reducer=GoldReducer(reducer=TSNE(n_components=2, random_state=42)),
         vectorized_key="features",
         class_key="label",
+        chunk=chunk,
         to_keep_schema=to_keep_schema,
         batch_size=batch_size,
         num_workers=num_workers,

@@ -1,5 +1,6 @@
 # CIFAR-10 Split Comparison Experiment Configuration
 gold_splitter:
+  chunk: 500
   min_pxt_insert_size: 10000
   batch_size: 128
   num_workers: 15
