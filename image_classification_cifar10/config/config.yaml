@@ -5,7 +5,8 @@ gold_splitter:
   batch_size: 128
   num_workers: 15
   table_name: cifar10_ten_percent_dinov3small_224
-  update_selection: False
+  update_selection: True
+  starts_with_train: False
 
 # Experiment settings
 split_method: gold  # Options: random, gold, or both
@@ -16,21 +17,23 @@ data_dir: .data
 
 random_state: 42
 remove_ratio: 0.9
+duplicate_table_path: cifar10_duplicate
+drop_duplicate_table: True
 to_duplicate_clusters: 4
 cluster_count: 50
 duplicate_per_sample: 25
 
 random_split_state: 42
 
-max_epochs: 50
+max_epochs: 20
 batch_size: 128
 learning_rate: 0.001
 num_workers: 15
-validate_on_test: False
+validate_on_test: True
 
 # MLFlow settings
 mlflow_tracking_uri: mlruns
-mlflow_experiment_name: cifar10-10percent-greedy
+mlflow_experiment_name: cifar10-10percent-val-first
 mlflow_run_name: DinoV3Small-224-block11
 
 # Debug settings

@@ -117,10 +117,17 @@ def get_gold_splitter(
         num_workers=num_workers,
     )
 
-    sets = [
-        GoldSet(name="val", size=val_ratio),
-        GoldSet(name="train", size=train_ratio),
-    ]
+    sets = (
+        [
+            GoldSet(name="train", size=train_ratio),
+            GoldSet(name="val", size=val_ratio),
+        ]
+        if splitter_config["starts_with_train"]
+        else [
+            GoldSet(name="val", size=val_ratio),
+            GoldSet(name="train", size=train_ratio),
+        ]
+    )
 
     return GoldSplitter(
         sets=sets,

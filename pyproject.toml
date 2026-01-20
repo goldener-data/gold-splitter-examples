@@ -39,6 +39,8 @@ dev-dependencies = [
     "ruff",
     "mypy",
     "pre-commit",
+    "pytest",
+    "notebook",
 ]
 
 [project.urls]

@@ -13,18 +13,19 @@ import torchvision
 from torchvision.datasets import CIFAR10
 from torchvision.transforms.v2 import (
     Compose,
-    Normalize,
-    ToTensor,
     RandomHorizontalFlip,
     ColorJitter,
-    Resize,
 )
 from sklearn.model_selection import train_test_split
 from sklearn.cluster import KMeans
 import pixeltable as pxt
 from goldener.split import GoldSplitter
 
-from image_classification_cifar10.utils import get_gold_splitter, get_gold_descriptor
+from image_classification_cifar10.utils import (
+    get_gold_splitter,
+    get_gold_descriptor,
+    CIFAR10_PREPROCESS,
+)
 
 logger = getLogger(__name__)
 
@@ -47,6 +48,8 @@ class GoldCifar10(CIFAR10):
         download: bool = False,
         count: int | None = None,
         remove_ratio: float | None = None,
+        duplicate_table_path: str | None = None,
+        drop_duplicate_table: bool = True,
         to_duplicate_clusters: int | None = None,
         cluster_count: int | None = None,
         duplicate_per_sample: int | None = None,
@@ -61,10 +64,14 @@ class GoldCifar10(CIFAR10):
             download=download,
         )
 
+        # keep only a subset if count is specified
+        # only the first 'count' samples are kept
         if count is not None:
             self.data: np.ndarray = self.data[:count]
             self.targets: list[int] = self.targets[:count]
 
+        # keep only a subset if remove_ratio is specified
+        # The removal is done randomly and stratified by class labels
         if remove_ratio is not None:
             training_indices, excluded = train_test_split(
                 range(len(self)),
@@ -75,30 +82,48 @@ class GoldCifar10(CIFAR10):
             )
             self.data = self.data[training_indices]
             self.targets = [self.targets[i] for i in training_indices]
+            self.excluded_indices = excluded
 
-        if to_duplicate_clusters is not None and cluster_count is not None:
+        # duplicate samples based on clustering if all duplication parameters are specified
+        self.duplicated_indices: list[int] = []
+        duplication_params = (
+            duplicate_table_path,
+            to_duplicate_clusters,
+            cluster_count,
+            duplicate_per_sample,
+        )
+        if any(duplication_params):
+            if not all(duplication_params):
+                raise ValueError(
+                    "If any duplication parameter is set, all must be set."
+                )
+
+            # extract the features using goldener
+            assert duplicate_table_path is not None
             gold_descriptor = get_gold_descriptor(
-                table_name="gold_cifar10_descriptor",
+                table_name=duplicate_table_path,
                 min_pxt_insert_size=10000,
                 batch_size=128,
                 num_workers=16,
                 to_keep_schema={"label": pxt.String},
             )
-            pxt.drop_table(gold_descriptor.table_path, if_not_exists="ignore")
-
+            if drop_duplicate_table:
+                pxt.drop_table(duplicate_table_path, if_not_exists="ignore")
             vectorized = gold_descriptor.describe_in_table(self)
-
             torch.cuda.empty_cache()
+
+            # group features and specific indices by label
             features_per_label = defaultdict(list)
             indices_per_label = defaultdict(list)
-
             for row in vectorized.select(
                 vectorized.idx, vectorized.features, vectorized.label
             ).collect():
                 features_per_label[row["label"]].append(row["features"])
                 indices_per_label[row["label"]].append(row["idx"])
 
+            # perform clustering and duplication per label
             for label, features in features_per_label.items():
+                assert cluster_count is not None
                 label_indices = indices_per_label[label]
                 logger.info(f"Adding duplicates for label {label}")
                 kmeans = KMeans(
@@ -109,6 +134,7 @@ class GoldCifar10(CIFAR10):
                 cluster_indices = np.random.choice(
                     range(cluster_count), size=to_duplicate_clusters, replace=False
                 )
+                logger.info(f"The selected clusters are {cluster_indices}")
                 for ci in cluster_indices:
                     for i, cluster_id in enumerate(kmeans.labels_):
                         if cluster_id == ci:
@@ -120,6 +146,7 @@ class GoldCifar10(CIFAR10):
                             self.targets.extend(
                                 [self.targets[label_indices[i]]] * duplicate_per_sample  # type: ignore[operator]
                             )
+                            self.duplicated_indices.append(label_indices[i])
 
     def __len__(self) -> int:
         return len(self.data) if self.count is None else min(self.count, len(self.data))
@@ -151,6 +178,8 @@ class CIFAR10DataModule(LightningDataModule):
 
         self.random_split_state = cfg["random_split_state"]
         self.remove_ratio = cfg["remove_ratio"]
+        self.duplicate_table_path = cfg["duplicate_table_path"]
+        self.drop_duplicate_table = cfg["drop_duplicate_table"]
         self.to_duplicate_clusters = cfg["to_duplicate_clusters"]
         self.cluster_count = cfg["cluster_count"]
         self.duplicate_per_sample = cfg["duplicate_per_sample"]
@@ -166,13 +195,7 @@ class CIFAR10DataModule(LightningDataModule):
         self.validate_on_test = cfg["validate_on_test"]
 
         # Define transforms
-        self.transform_test = Compose(
-            [
-                ToTensor(),
-                Resize(224),
-                Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
-            ]
-        )
+        self.transform_test = CIFAR10_PREPROCESS
         self.transform_train = Compose(
             [
                 RandomHorizontalFlip(),
@@ -183,7 +206,8 @@ class CIFAR10DataModule(LightningDataModule):
         name_prefix = (
             f"settings_{self.random_state}_{self.remove_ratio}"
             f"_{self.cluster_count}_{self.to_duplicate_clusters}"
-            f"_{self.duplicate_per_sample}_{self.gold_splitter_cfg["chunks"]}"
+            f"_{self.duplicate_per_sample}_{self.gold_splitter_cfg.chunk}"
+            f"_{self.gold_splitter_cfg.starts_with_train}"
         )
         name_prefix = name_prefix.replace(".", "_")
         self.gold_splitter: GoldSplitter = get_gold_splitter(
@@ -198,7 +222,8 @@ class CIFAR10DataModule(LightningDataModule):
                 self.gold_splitter.descriptor.table_path, if_not_exists="ignore"
             )
 
-        self.excluded: Subset
+        self.excluded_train_indices: Subset
+        self.duplicated_train_indices: list[int]
         self.gold_train_indices: list[int]
         self.gold_val_indices: list[int]
         self.gold_train_dataset: Subset
@@ -223,11 +248,15 @@ class CIFAR10DataModule(LightningDataModule):
                 download=False,
                 count=self.train_count,
                 random_state=self.random_state,
-                remove_ratio=0.9,
-                to_duplicate_clusters=4,
-                cluster_count=50,
-                duplicate_per_sample=25,
+                remove_ratio=self.remove_ratio,
+                duplicate_table_path=self.duplicate_table_path,
+                drop_duplicate_table=self.drop_duplicate_table,
+                to_duplicate_clusters=self.to_duplicate_clusters,
+                cluster_count=self.cluster_count,
+                duplicate_per_sample=self.duplicate_per_sample,
             )
+            self.duplicated_train_indices = dataset.duplicated_indices
+            self.excluded_train_indices = dataset.excluded_indices
 
             # make random splitting with sklearn
             self.sk_train_indices, self.sk_val_indices = train_test_split(

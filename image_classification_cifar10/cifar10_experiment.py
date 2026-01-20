@@ -37,6 +37,7 @@ pxt.configure_logging(to_stdout=True, level=WARNING, remove="goldener")
 def run_experiment(
     cfg: DictConfig,
     data_module: CIFAR10DataModule,
+    splitting_duration: float,
     split_method: str = "random",
 ) -> dict:
     model = Cifar10DinoV3ViTSmall(learning_rate=cfg.learning_rate)
@@ -53,24 +54,39 @@ def run_experiment(
             "split_method": split_method,
             "train_ratio": cfg.train_ratio,
             "val_ratio": cfg.val_ratio,
+            "random_state": cfg.random_state,
+            "remove_ratio": cfg.remove_ratio,
+            "to_duplicate_clusters": cfg.to_duplicate_clusters,
+            "cluster_count": cfg.cluster_count,
+            "duplicate_per_sample": cfg.duplicate_per_sample,
+            "random_split_state": cfg.random_split_state,
             "max_epochs": cfg.max_epochs,
             "batch_size": cfg.batch_size,
             "learning_rate": cfg.learning_rate,
-            "random_state": cfg.random_state,
-            "random_split_state": cfg.random_split_state,
-            "vectorized_path": data_module.gold_splitter.descriptor.table_path,
-            "splitting_duration": cfg["splitting duration"],
+            "splitting_duration": splitting_duration,
+            "splitting_chunk": cfg.gold_splitter.chunk,
+            "splitting_starts_with_train": cfg.gold_splitter.splitting_starts_with_train,
+            "splitting_update_selection": cfg.gold_splitter.update_selection,
         }
     )
 
     mlflow_logger.experiment.log_dict(
-        {
+        run_id=mlflow_logger.run_id,
+        dictionary=dict(cfg),
+        artifact_file="config.yaml",
+    )
+
+    mlflow_logger.experiment.log_dict(
+        run_id=mlflow_logger.run_id,
+        dictionary={
             "gold_train_indices": data_module.gold_train_indices,
             "gold_val_indices": data_module.gold_val_indices,
             "sk_train_indices": data_module.sk_train_indices,
             "sk_val_indices": data_module.sk_val_indices,
+            "duplicated": data_module.duplicated_train_indices,
+            "excluded_indices": data_module.excluded_train_indices,
         },
-        "indices.json",
+        artifact_file="indices.json",
     )
 
     # Setup callbacks
@@ -109,13 +125,15 @@ def run_experiment(
         if split_method == "random"
         else data_module.gold_train_dataloader()
     )
-    val_dataloader = (
-        data_module.sk_val_dataloader()
+    val_dataloaders = (
+        [data_module.sk_val_dataloader()]
         if split_method == "random"
-        else data_module.gold_val_dataloader()
+        else [data_module.gold_val_dataloader()]
     )
+    if cfg.validate_on_test:
+        val_dataloaders.append(data_module.test_dataloader())
     trainer.fit(
-        model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader
+        model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloaders
     )
 
     # Test the model
@@ -161,7 +179,8 @@ def main(cfg: DictConfig):
     )
     data_module.prepare_data()
     data_module.setup(stage="fit")
-    cfg["splitting duration"] = time.monotonic() - starts
+
+    splitting_duration = time.monotonic() - starts
     # Run experiments based on split method argument
     if cfg.split_method == "both":
         split_methods = [
@@ -176,6 +195,7 @@ def main(cfg: DictConfig):
             split_method=split_method,
             data_module=data_module,
             cfg=cfg,
+            splitting_duration=splitting_duration,
         )
         results.append(result)
 
