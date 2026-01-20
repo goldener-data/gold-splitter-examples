@@ -63,11 +63,14 @@ class Cifar10DinoV3ViTSmall(LightningModule):
 
     def validation_step(
         self,
-        batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+        batch: tuple[torch.Tensor, ...],
         batch_idx: int,
         dataloader_idx: int,
     ) -> STEP_OUTPUT:
-        x, y, _ = batch
+        if dataloader_idx == 0:
+            x, y, _ = batch
+        else:
+            x, y = batch
         logits = self(x)
         loss = F.cross_entropy(logits, y)
 

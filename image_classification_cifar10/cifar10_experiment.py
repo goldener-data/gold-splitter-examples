@@ -65,7 +65,7 @@ def run_experiment(
             "learning_rate": cfg.learning_rate,
             "splitting_duration": splitting_duration,
             "splitting_chunk": cfg.gold_splitter.chunk,
-            "splitting_starts_with_train": cfg.gold_splitter.splitting_starts_with_train,
+            "splitting_starts_with_train": cfg.gold_splitter.starts_with_train,
             "splitting_update_selection": cfg.gold_splitter.update_selection,
         }
     )
@@ -131,13 +131,14 @@ def run_experiment(
         else [data_module.gold_val_dataloader()]
     )
     if cfg.validate_on_test:
+        data_module.setup(stage="test")
         val_dataloaders.append(data_module.test_dataloader())
     trainer.fit(
         model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloaders
     )
 
-    # Test the model
-    data_module.setup(stage="test")
+    if not cfg.validate_on_test:
+        data_module.setup(stage="test")
 
     test_results = trainer.test(model, data_module, ckpt_path="best")
 
