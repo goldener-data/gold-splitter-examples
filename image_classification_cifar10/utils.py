@@ -94,12 +94,12 @@ def get_gold_splitter(
     min_pxt_insert_size = splitter_config["min_pxt_insert_size"]
     chunk = splitter_config["chunk"]
 
-    table_name = splitter_config["table_name"]
-
     to_keep_schema = {"label": pxt.String}
 
+    table_name = f"{name_prefix}_{splitter_config["table_name"]}"
+
     descriptor = get_gold_descriptor(
-        table_name=f"{name_prefix}_{table_name}",
+        table_name=f"{table_name}_description",
         min_pxt_insert_size=min_pxt_insert_size,
         batch_size=batch_size,
         num_workers=num_workers,
@@ -107,7 +107,7 @@ def get_gold_splitter(
     )
 
     selector = GoldSelector(
-        table_path=table_name,
+        table_path=f"{table_name}_selection",
         reducer=GoldReducer(reducer=TSNE(n_components=2, random_state=42)),
         vectorized_key="features",
         class_key="label",

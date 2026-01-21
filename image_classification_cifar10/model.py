@@ -2,6 +2,7 @@ import timm
 from lightning import LightningModule
 import torch
 from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRSchedulerConfig
+from lightning.pytorch.utilities.combined_loader import CombinedLoader
 from timm.models import Eva
 from torch.nn import functional as F
 from torchmetrics.classification import MulticlassAUROC
@@ -31,86 +32,96 @@ class Cifar10DinoV3ViTSmall(LightningModule):
     def on_train_start(self) -> None:
         self.train_auroc = MulticlassAUROC(num_classes=10)
 
-    def training_step(
-        self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
-    ) -> STEP_OUTPUT:
+    def _step(
+        self,
+        batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+        auroc_metric: MulticlassAUROC,
+        prefix: str,
+    ) -> torch.Tensor:
         x, y, _ = batch
+
+        # loss
         logits = self(x)
         loss = F.cross_entropy(logits, y)
+        self.log(f"{prefix}_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
-        # Calculate accuracy
+        # accuracy
         preds = torch.argmax(logits, dim=1)
         acc = (preds == y).float().mean()
+        self.log(f"{prefix}_acc", acc, on_step=False, on_epoch=True, prog_bar=True)
 
-        # Log metrics
-        self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train_acc", acc, on_step=False, on_epoch=True, prog_bar=True)
-
-        # Update AUROC
+        # AUROC
         probs = F.softmax(logits, dim=1)
-        self.train_auroc.update(probs, y)
-
-        return loss
-
-    def on_train_epoch_end(self) -> None:
-        auroc = self.train_auroc.compute()
-        self.log("train_auroc", auroc, prog_bar=True)
-        self.train_auroc.reset()
-
-    def on_validation_start(self) -> None:
-        self.val_auroc = MulticlassAUROC(num_classes=10)
-        self.val_on_test_auroc = MulticlassAUROC(num_classes=10)
-
-    def validation_step(
-        self,
-        batch: tuple[torch.Tensor, ...],
-        batch_idx: int,
-        dataloader_idx: int,
-    ) -> STEP_OUTPUT:
-        if dataloader_idx == 0:
-            x, y, _ = batch
-        else:
-            x, y = batch
-        logits = self(x)
-        loss = F.cross_entropy(logits, y)
-
-        # Log metrics
-        loss_name = "val_on_test_loss" if dataloader_idx == 1 else "val_loss"
-        self.log(loss_name, loss, on_step=False, on_epoch=True, prog_bar=True)
-
-        # Update AUROC
-        probs = F.softmax(logits, dim=1)
-        auroc_metric = self.val_on_test_auroc if dataloader_idx == 1 else self.val_auroc
         auroc_metric.update(probs, y)
 
         return loss
 
-    def on_validation_epoch_end(self) -> None:
-        val_auroc = self.val_auroc.compute()
-        self.log("val_auroc", val_auroc, prog_bar=True)
-        self.val_auroc.reset()
+    def _compute_auroc_and_log(
+        self,
+        auroc_metric: MulticlassAUROC,
+        prefix: str,
+    ) -> None:
+        auroc = auroc_metric.compute()
+        self.log(f"{prefix}_auroc", auroc, prog_bar=True)
+        auroc_metric.reset()
 
-        val_on_test_auroc = self.val_on_test_auroc.compute()
-        self.log("val_on_test_auroc", val_on_test_auroc, prog_bar=True)
-        self.val_on_test_auroc.reset()
+    def training_step(
+        self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> STEP_OUTPUT:
+        return self._step(batch, self.train_auroc, "train")
+
+    def on_train_epoch_end(self) -> None:
+        self._compute_auroc_and_log(self.train_auroc, "train")
+
+    @property
+    def has_test_as_val(self) -> bool:
+        if not isinstance(self.trainer.val_dataloaders, CombinedLoader):
+            return False
+        return "test_as_val" in self.trainer.val_dataloaders.iterables
+
+    def on_validation_start(self) -> None:
+        self.val_auroc = MulticlassAUROC(num_classes=10)
+        if self.has_test_as_val:
+            self.test_as_val_auroc = MulticlassAUROC(num_classes=10)
+
+    def validation_step(
+        self,
+        batch: dict[str, tuple[torch.Tensor, torch.Tensor, torch.Tensor]]
+        | tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+        batch_idx: int,
+    ) -> STEP_OUTPUT:
+        if isinstance(batch, dict):
+            val_batch = batch["val"]
+            test_batch = batch["test_as_val"] if "test_as_val" in batch else None
+        else:
+            val_batch = batch
+            test_batch = None
+
+        loss = None
+        if val_batch is not None:
+            loss = self._step(val_batch, self.val_auroc, "val")
+        if test_batch is not None:
+            self._step(test_batch, self.test_as_val_auroc, "test_as_val")
+
+        return loss
+
+    def on_validation_epoch_end(self) -> None:
+        self._compute_auroc_and_log(self.val_auroc, "val")
+
+        if self.has_test_as_val:
+            self._compute_auroc_and_log(self.test_as_val_auroc, "test_as_val")
 
     def on_test_start(self) -> None:
         self.test_auroc = MulticlassAUROC(num_classes=10)
 
     def test_step(
-        self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
+        self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> STEP_OUTPUT:
-        x, y = batch
-        logits = self(x)
-
-        probs = F.softmax(logits, dim=1)
-        self.test_auroc.update(probs, y)
-
-        return probs
+        return self._step(batch, self.test_auroc, "test")
 
     def on_test_epoch_end(self) -> None:
-        auroc = self.test_auroc.compute()
-        self.log("test_auroc", auroc, prog_bar=True)
+        test_auroc = self.test_auroc.compute()
+        self.log("test_auroc", test_auroc, prog_bar=True)
         self.test_auroc.reset()
 
     def configure_optimizers(

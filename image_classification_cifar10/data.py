@@ -11,11 +11,6 @@ from omegaconf import DictConfig
 from torch.utils.data import Subset, DataLoader
 import torchvision
 from torchvision.datasets import CIFAR10
-from torchvision.transforms.v2 import (
-    Compose,
-    RandomHorizontalFlip,
-    ColorJitter,
-)
 from sklearn.model_selection import train_test_split
 from sklearn.cluster import KMeans
 import pixeltable as pxt
@@ -149,7 +144,7 @@ class GoldCifar10(CIFAR10):
                             self.duplicated_indices.append(label_indices[i])
 
     def __len__(self) -> int:
-        return len(self.data) if self.count is None else min(self.count, len(self.data))
+        return len(self.data)
 
     def __getitem__(self, index: int) -> Tuple:
         if self.count is not None and index >= self.count:
@@ -195,14 +190,8 @@ class CIFAR10DataModule(LightningDataModule):
         self.validate_on_test = cfg["validate_on_test"]
 
         # Define transforms
-        self.transform_test = CIFAR10_PREPROCESS
-        self.transform_train = Compose(
-            [
-                RandomHorizontalFlip(),
-                ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-            ]
-            + list(self.transform_test.transforms)
-        )
+        self.transform = CIFAR10_PREPROCESS
+
         name_prefix = (
             f"settings_{self.random_state}_{self.remove_ratio}"
             f"_{self.cluster_count}_{self.to_duplicate_clusters}"
@@ -244,7 +233,7 @@ class CIFAR10DataModule(LightningDataModule):
             dataset = GoldCifar10(
                 root=self.data_dir,
                 train=True,
-                transform=self.transform_test,
+                transform=self.transform,
                 download=False,
                 count=self.train_count,
                 random_state=self.random_state,
@@ -281,10 +270,10 @@ class CIFAR10DataModule(LightningDataModule):
             self.gold_val_dataset = Subset(dataset, self.gold_val_indices)
 
         if stage == "test" or stage is None:
-            self.test_dataset = torchvision.datasets.CIFAR10(
+            self.test_dataset = GoldCifar10(
                 root=self.data_dir,
                 train=False,
-                transform=self.transform_test,
+                transform=self.transform,
                 download=False,
             )
 
@@ -352,6 +341,7 @@ class CIFAR10DataModule(LightningDataModule):
             num_workers=self.num_workers,
             persistent_workers=True if self.num_workers > 0 else False,
             pin_memory=True,
+            generator=torch.Generator().manual_seed(self.random_state),
         )
 
     def sk_val_dataloader(self) -> DataLoader:
@@ -372,6 +362,7 @@ class CIFAR10DataModule(LightningDataModule):
             num_workers=self.num_workers,
             persistent_workers=True if self.num_workers > 0 else False,
             pin_memory=True,
+            generator=torch.Generator().manual_seed(self.random_state),
         )
 
     def gold_val_dataloader(self) -> DataLoader:

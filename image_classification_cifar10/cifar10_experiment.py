@@ -23,6 +23,7 @@ import pixeltable as pxt
 from lightning import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
+from lightning.pytorch.utilities.combined_loader import CombinedLoader
 
 
 from image_classification_cifar10.data import CIFAR10DataModule
@@ -125,16 +126,21 @@ def run_experiment(
         if split_method == "random"
         else data_module.gold_train_dataloader()
     )
-    val_dataloaders = (
-        [data_module.sk_val_dataloader()]
-        if split_method == "random"
-        else [data_module.gold_val_dataloader()]
-    )
+    val_dataloaders = {
+        "val": (
+            data_module.sk_val_dataloader()
+            if split_method == "random"
+            else data_module.gold_val_dataloader()
+        )
+    }
     if cfg.validate_on_test:
         data_module.setup(stage="test")
-        val_dataloaders.append(data_module.test_dataloader())
+        val_dataloaders["test_as_val"] = data_module.test_dataloader()
+
     trainer.fit(
-        model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloaders
+        model,
+        train_dataloaders=train_dataloader,
+        val_dataloaders=CombinedLoader(val_dataloaders, mode="max_size"),
     )
 
     if not cfg.validate_on_test:
