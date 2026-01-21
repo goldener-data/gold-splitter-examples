@@ -16,7 +16,7 @@ val_ratio: 0.3
 data_dir: .data
 
 random_state: 42
-remove_ratio: 0.9
+remove_ratio: 0.95
 duplicate_table_path: cifar10_duplicate
 drop_duplicate_table: True
 to_duplicate_clusters: 4
