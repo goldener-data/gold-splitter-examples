@@ -2,7 +2,6 @@ import timm
 from lightning import LightningModule
 import torch
 from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRSchedulerConfig
-from lightning.pytorch.utilities.combined_loader import CombinedLoader
 from timm.models import Eva
 from torch.nn import functional as F
 from torchmetrics.classification import MulticlassAUROC
@@ -25,6 +24,12 @@ class Cifar10DinoV3ViTSmall(LightningModule):
         assert isinstance(self.vit, Eva)
 
         self.save_hyperparameters()
+
+    @property
+    def has_test_as_val(self) -> bool:
+        if not isinstance(self.trainer.val_dataloaders, dict):
+            return False
+        return "test_as_val" in self.trainer.val_dataloaders
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.vit(x)
@@ -73,13 +78,7 @@ class Cifar10DinoV3ViTSmall(LightningModule):
     def on_train_epoch_end(self) -> None:
         self._compute_auroc_and_log(self.train_auroc, "train")
 
-    @property
-    def has_test_as_val(self) -> bool:
-        if not isinstance(self.trainer.val_dataloaders, CombinedLoader):
-            return False
-        return "test_as_val" in self.trainer.val_dataloaders.iterables
-
-    def on_validation_start(self) -> None:
+    def on_validation_epoch_start(self) -> None:
         self.val_auroc = MulticlassAUROC(num_classes=10)
         if self.has_test_as_val:
             self.test_as_val_auroc = MulticlassAUROC(num_classes=10)
