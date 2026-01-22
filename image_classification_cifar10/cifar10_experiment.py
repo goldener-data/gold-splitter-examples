@@ -41,6 +41,8 @@ def run_experiment(
     splitting_duration: float,
     split_method: str = "random",
 ) -> dict:
+    # make sure the transformer head is the same for all runs
+    seed_everything(cfg.random_state)
     model = Cifar10DinoV3ViTSmall(learning_rate=cfg.learning_rate)
 
     mlflow_logger = MLFlowLogger(
