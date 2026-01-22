@@ -27,7 +27,7 @@ from lightning.pytorch.utilities.combined_loader import CombinedLoader
 
 
 from image_classification_cifar10.data import CIFAR10DataModule
-from image_classification_cifar10.model import Cifar10DinoV3ViTSmall
+from image_classification_cifar10.model import Cifar10CNN
 
 
 logger = getLogger(__name__)
@@ -43,12 +43,12 @@ def run_experiment(
 ) -> dict:
     # make sure the transformer head is the same for all runs
     seed_everything(cfg.random_state)
-    model = Cifar10DinoV3ViTSmall(learning_rate=cfg.learning_rate)
+    model = Cifar10CNN(learning_rate=cfg.learning_rate)
 
     mlflow_logger = MLFlowLogger(
-        experiment_name=cfg.mlflow_experiment_name,
+        experiment_name=f"{cfg.mlflow_experiment_name}_{data_module.settings_as_str}",
         tracking_uri=cfg.mlflow_tracking_uri,
-        run_name=f"{cfg.mlflow_run_name}_{split_method}",
+        run_name=f"{cfg.mlflow_run_name}_{split_method}_{data_module.settings_as_str}",
     )
 
     # Log additional parameters

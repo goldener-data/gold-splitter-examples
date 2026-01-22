@@ -192,16 +192,9 @@ class CIFAR10DataModule(LightningDataModule):
         # Define transforms
         self.transform = CIFAR10_PREPROCESS
 
-        name_prefix = (
-            f"settings_{self.random_state}_{self.remove_ratio}"
-            f"_{self.cluster_count}_{self.to_duplicate_clusters}"
-            f"_{self.duplicate_per_sample}_{self.gold_splitter_cfg.chunk}"
-            f"_{self.gold_splitter_cfg.starts_with_train}"
-        )
-        name_prefix = name_prefix.replace(".", "_")
         self.gold_splitter: GoldSplitter = get_gold_splitter(
             splitter_cfg=self.gold_splitter_cfg,
-            name_prefix=name_prefix,
+            name_prefix=self.settings_as_str,
             train_ratio=self.train_ratio,
             val_ratio=self.val_ratio,
             max_batches=self.max_batches,
@@ -223,6 +216,15 @@ class CIFAR10DataModule(LightningDataModule):
         self.sk_val_dataset: Subset
         self.test_dataset: torchvision.datasets.CIFAR10
 
+    @property
+    def settings_as_str(self) -> str:
+        return (
+            f"settings_{self.random_state}_{self.remove_ratio}"
+            f"_{self.cluster_count}_{self.to_duplicate_clusters}"
+            f"_{self.duplicate_per_sample}_{self.gold_splitter_cfg.chunk}"
+            f"_{self.gold_splitter_cfg.starts_with_train}"
+        ).replace(".", "_")
+
     def prepare_data(self) -> None:
         # Download CIFAR-10
         torchvision.datasets.CIFAR10(root=self.data_dir, train=True, download=True)
@@ -238,7 +240,7 @@ class CIFAR10DataModule(LightningDataModule):
                 count=self.train_count,
                 random_state=self.random_state,
                 remove_ratio=self.remove_ratio,
-                duplicate_table_path=self.duplicate_table_path,
+                duplicate_table_path=f"{self.duplicate_table_path}_{self.settings_as_str}",
                 drop_duplicate_table=self.drop_duplicate_table,
                 to_duplicate_clusters=self.to_duplicate_clusters,
                 cluster_count=self.cluster_count,

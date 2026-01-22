@@ -1,13 +1,22 @@
-import timm
 from lightning import LightningModule
 import torch
 from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRSchedulerConfig
-from timm.models import Eva
-from torch.nn import functional as F
+from torch.nn import (
+    functional as F,
+    Flatten,
+    Sequential,
+    Conv2d,
+    BatchNorm2d,
+    ReLU,
+    MaxPool2d,
+    AdaptiveAvgPool2d,
+    Linear,
+    Dropout,
+)
 from torchmetrics.classification import MulticlassAUROC
 
 
-class Cifar10DinoV3ViTSmall(LightningModule):
+class Cifar10CNN(LightningModule):
     def __init__(
         self,
         learning_rate: float = 0.001,
@@ -15,13 +24,23 @@ class Cifar10DinoV3ViTSmall(LightningModule):
         super().__init__()
         self.learning_rate = learning_rate
 
-        self.vit = timm.create_model(
-            "vit_small_patch16_dinov3.lvd1689m",
-            pretrained=True,
-            img_size=224,
-            num_classes=10,
+        self.model = Sequential(
+            Conv2d(3, 32, kernel_size=3, padding=1),
+            BatchNorm2d(32),
+            ReLU(),
+            MaxPool2d(2),  # 32x16x16 for 32x32 inputs
+            Conv2d(32, 64, kernel_size=3, padding=1),
+            BatchNorm2d(64),
+            ReLU(),
+            MaxPool2d(2),  # 64x8x8
+            Conv2d(64, 128, kernel_size=3, padding=1),
+            BatchNorm2d(128),
+            ReLU(),
+            AdaptiveAvgPool2d(1),  # 128x1x1
+            Flatten(),
+            Dropout(0.2),
+            Linear(128, 10),
         )
-        assert isinstance(self.vit, Eva)
 
         self.save_hyperparameters()
 
@@ -32,7 +51,7 @@ class Cifar10DinoV3ViTSmall(LightningModule):
         return "test_as_val" in self.trainer.val_dataloaders
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.vit(x)
+        return self.model(x)
 
     def on_train_start(self) -> None:
         self.train_auroc = MulticlassAUROC(num_classes=10)
