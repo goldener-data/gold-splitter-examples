@@ -111,7 +111,7 @@ def run_experiment(
         devices=1,
         logger=mlflow_logger,
         callbacks=[checkpoint_callback],
-        deterministic=False,
+        deterministic=True,
         log_every_n_steps=50,
         limit_train_batches=debug_train_count if debug_train_count is not None else 1.0,
         limit_val_batches=debug_count if debug_count is not None else 1.0,
