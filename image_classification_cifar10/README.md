@@ -1,7 +1,7 @@
 # CIFAR-10 Split Comparison Experiment
 
-This experiment compares the two data splitting strategies for training 
-a ViT-S pretrained with DinoV3 on the CIFAR-10 dataset. 
+This experiment compares the two data splitting strategies for training
+a simple convolutional neural network on the CIFAR-10 dataset.
 
 
 ## Table of Contents
@@ -19,17 +19,17 @@ a ViT-S pretrained with DinoV3 on the CIFAR-10 dataset.
 ## Main components
 
 - **Configuration**: The experiment is configured from a config file loaded from Hydra for flexible configuration management.
-It allows to specify the hyperparameters and logging parameter for the model training/evaluation 
+It allows to specify the hyperparameters and logging parameter for the model training/evaluation
 but as well as the data split method to use and the settings for the GoldSplitter.
 
-- **CIFAR10DataModule**: A specific Pytorch Datamodule allowing to load data from the CIFAR-10 dataset from torchvision 
-(50,000 training images, 10,000 test images). Depending on the configuration, only a subset of the 
+- **CIFAR10DataModule**: A specific Pytorch Datamodule allowing to load data from the CIFAR-10 dataset from torchvision
+(50,000 training images, 10,000 test images). Depending on the configuration, only a subset of the
 training images is used for training/validation.
 
-- **Cifar10DinoV3ViTSmall**: A specific Pytorch Lightning LightningModule allowing to train and evaluate a Dinov3 ViT-S from Timm 
+- **Cifar10CNN**: A specific Pytorch Lightning LightningModule allowing to train and evaluate a simple CNN model
 to make image classification for the CIFAR-p10 dataset.
 
-- **Trainer**: PyTorch Lightning Trainer for efficient training management allowing to handle training, validation and 
+- **Trainer**: PyTorch Lightning Trainer for efficient training management allowing to handle training, validation and
 testing loops. It allows as well to checkpoint the best model based on validation AUROC metric.
 
 - **Logging**: MLFlow for experiment tracking allowing to compare the different splitting strategies based on the logged metrics.
@@ -64,19 +64,6 @@ Then navigate to `http://localhost:5000` in your browser.
 
 ### Data Preprocessing
 
-**Training Set with augmentation**:
-```python
-Compose(
-  [
-    RandomHorizontalFlip(),
-    ToTensor(),
-    Resize(224),
-    Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
-  ]
-)
-```
-
-**Validation/Test Set**:
 ```python
 Compose(
   [
@@ -102,8 +89,8 @@ Compose(
 - **Loss Function**: CrossEntropyLoss
   - Applied to raw logits
 
-- **Batch Size**: 128 (default, configurable)
-- **Max Epochs**: 100 (default, configurable)
+- **Batch Size**: 256 (default, configurable)
+- **Max Epochs**: 40 (default, configurable)
 
 ### Evaluation Metrics
 
@@ -196,6 +183,5 @@ Then open `http://localhost:5000` in your browser to compare results between spl
 
 Dependencies are managed at the repository root level in `pyproject.toml`.
 
-- [Timm](https://huggingface.co/timm): Dinov3 ViT-S model
 - [Torchvision](https://pytorch.org/vision/stable/index.html): CIFAR-10 dataset and transforms
 - [Pillow](https://python-pillow.org/): Image loading

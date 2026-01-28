@@ -1,6 +1,6 @@
 # gold-split-examples
 
-Different examples using Goldener GoldSplitter during training Machine Learning models. 
+Different examples using Goldener GoldSplitter during training Machine Learning models.
 These examples systematically compares two data splitting strategies for training machine learning models.
 Data splitting is a critical step that can significantly impact model performance and generalization.
 While random splitting is the standard approach, smart splitting strategies like GoldSplitter aim
@@ -49,7 +49,7 @@ The pre-commit hooks will automatically run:
 
 ## Examples
 
-### 1. Image Classification: CIFAR-10 with linear probing from DinoV3 ViT-S
+### 1. Image Classification: CIFAR-10 with simple CNN
 
 **Quick Start**:
 ```bash
@@ -65,5 +65,5 @@ See the [detailed README](image_classification_cifar10/README.md) for more infor
 
 ## About Goldener
 
-Goldener provides intelligent data splitting strategies that aim to create 
+Goldener provides intelligent data splitting strategies that aim to create
 more balanced and representative train/validation splits compared to traditional random splitting.

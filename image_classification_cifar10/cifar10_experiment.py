@@ -49,6 +49,7 @@ def run_experiment(
         experiment_name=f"{cfg.mlflow_experiment_name}_{data_module.settings_as_str}",
         tracking_uri=cfg.mlflow_tracking_uri,
         run_name=f"{cfg.mlflow_run_name}_{split_method}_{data_module.settings_as_str}",
+        log_model=True,
     )
 
     # Log additional parameters
@@ -100,6 +101,7 @@ def run_experiment(
         save_top_k=1,
         mode="max",
         verbose=True,
+        every_n_epochs=1,
     )
 
     # Initialize trainer

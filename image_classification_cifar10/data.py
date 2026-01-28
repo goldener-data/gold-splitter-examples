@@ -117,6 +117,7 @@ class GoldCifar10(CIFAR10):
                 indices_per_label[row["label"]].append(row["idx"])
 
             # perform clustering and duplication per label
+            random_generator = np.random.default_rng(random_state)
             for label, features in features_per_label.items():
                 assert cluster_count is not None
                 label_indices = indices_per_label[label]
@@ -126,8 +127,10 @@ class GoldCifar10(CIFAR10):
                     random_state=random_state,
                     n_init="auto",
                 ).fit(np.stack(features, axis=0))
-                cluster_indices = np.random.choice(
-                    range(cluster_count), size=to_duplicate_clusters, replace=False
+                cluster_indices = random_generator.choice(
+                    range(cluster_count),
+                    size=to_duplicate_clusters,
+                    replace=False,
                 )
                 logger.info(f"The selected clusters are {cluster_indices}")
                 for ci in cluster_indices:
