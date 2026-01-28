@@ -204,6 +204,9 @@ class CIFAR10DataModule(LightningDataModule):
         )
         if cfg["gold_splitter"]["update_selection"]:
             pxt.drop_table(
+                self.gold_splitter.selector.table_path, if_not_exists="ignore"
+            )
+            pxt.drop_table(
                 self.gold_splitter.descriptor.table_path, if_not_exists="ignore"
             )
 
