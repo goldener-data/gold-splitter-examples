@@ -10,6 +10,12 @@ import numpy as np
 from omegaconf import DictConfig
 from torch.utils.data import Subset, DataLoader
 import torchvision
+from torchvision.transforms.v2 import (
+    Compose,
+    RandomHorizontalFlip,
+    ColorJitter,
+    RandomRotation,
+)
 from torchvision.datasets import CIFAR10
 from sklearn.model_selection import train_test_split
 from sklearn.cluster import KMeans
@@ -194,6 +200,14 @@ class CIFAR10DataModule(LightningDataModule):
 
         # Define transforms
         self.transform = CIFAR10_PREPROCESS
+        self.train_transforms = Compose(
+            [
+                RandomHorizontalFlip(),
+                ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+                RandomRotation(degrees=15),
+            ]
+            + self.transform.transforms
+        )
 
         self.gold_splitter: GoldSplitter = get_gold_splitter(
             splitter_cfg=self.gold_splitter_cfg,
@@ -252,6 +266,7 @@ class CIFAR10DataModule(LightningDataModule):
                 cluster_count=self.cluster_count,
                 duplicate_per_sample=self.duplicate_per_sample,
             )
+            dataset.transform = self.train_transforms
             self.duplicated_train_indices = dataset.duplicated_indices
             self.excluded_train_indices = dataset.excluded_indices
 
