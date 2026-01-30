@@ -297,7 +297,7 @@ class CIFAR10DataModule(LightningDataModule):
             self.gold_val_dataset = Subset(dataset, self.gold_val_indices)
 
             # make perfect training
-            no_dup_count = 50000 * (1 - self.remove_ratio)
+            no_dup_count = int(50000 * (1 - self.remove_ratio))
             train_count = len(self.gold_train_indices)
             self.perfect_train_indices = list(range(no_dup_count))
             if train_count > no_dup_count:
