@@ -128,13 +128,21 @@ def run_experiment(
     train_dataloader = (
         data_module.sk_train_dataloader()
         if split_method == "random"
-        else data_module.gold_train_dataloader()
+        else (
+            data_module.gold_train_dataloader()
+            if split_method == "gold"
+            else data_module.perfect_train_dataloader()
+        )
     )
     val_dataloaders = {
         "val": (
             data_module.sk_val_dataloader()
             if split_method == "random"
-            else data_module.gold_val_dataloader()
+            else (
+                data_module.gold_val_dataloader()
+                if split_method == "gold"
+                else data_module.perfect_val_dataloader()
+            )
         )
     }
     if cfg.validate_on_test:
@@ -193,10 +201,11 @@ def main(cfg: DictConfig):
 
     splitting_duration = time.monotonic() - starts
     # Run experiments based on split method argument
-    if cfg.split_method == "both":
+    if cfg.split_method == "all":
         split_methods = [
             "gold",
             "random",
+            "perfect",
         ]
     else:
         split_methods = [cfg.split_method]

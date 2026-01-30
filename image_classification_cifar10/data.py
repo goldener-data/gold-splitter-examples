@@ -234,7 +234,11 @@ class CIFAR10DataModule(LightningDataModule):
         self.sk_val_indices: list[int]
         self.sk_train_dataset: Subset
         self.sk_val_dataset: Subset
-        self.test_dataset: torchvision.datasets.CIFAR10
+        self.perfect_train_indices: list[int]
+        self.perfect_val_indices: list[int]
+        self.perfect_train_dataset: Subset
+        self.perfect_val_dataset: Subset
+        self.test_dataset: GoldCifar10
 
     @property
     def settings_as_str(self) -> str:
@@ -291,6 +295,30 @@ class CIFAR10DataModule(LightningDataModule):
             self.gold_val_indices = list(splits["val"])
             self.gold_train_dataset = Subset(dataset, self.gold_train_indices)
             self.gold_val_dataset = Subset(dataset, self.gold_val_indices)
+
+            # make perfect training
+            no_dup_count = 50000 * (1 - self.remove_ratio)
+            train_count = len(self.gold_train_indices)
+            self.perfect_train_indices = list(range(no_dup_count))
+            if train_count > no_dup_count:
+                not_selected = list(
+                    range(len(self.perfect_train_indices), len(dataset))
+                )
+                keep_in_train, self.perfect_val_indices = train_test_split(
+                    not_selected,
+                    test_size=len(dataset) - train_count,
+                    random_state=self.random_split_state,
+                    shuffle=True,
+                    stratify=dataset.targets_as_array[not_selected],
+                )
+                self.perfect_train_indices += keep_in_train
+            else:
+                raise ValueError(
+                    "too much initial training samples for perfect training."
+                )
+
+            self.perfect_train_dataset = Subset(dataset, self.perfect_train_indices)
+            self.perfect_val_dataset = Subset(dataset, self.perfect_val_indices)
 
         if stage == "test" or stage is None:
             self.test_dataset = GoldCifar10(
@@ -391,6 +419,27 @@ class CIFAR10DataModule(LightningDataModule):
     def gold_val_dataloader(self) -> DataLoader:
         return DataLoader(
             self.gold_val_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            persistent_workers=True if self.num_workers > 0 else False,
+            pin_memory=True,
+        )
+
+    def perfect_train_dataloader(self) -> DataLoader:
+        return DataLoader(
+            self.perfect_train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+            persistent_workers=True if self.num_workers > 0 else False,
+            pin_memory=True,
+            generator=torch.Generator().manual_seed(self.random_state),
+        )
+
+    def perfect_val_dataloader(self) -> DataLoader:
+        return DataLoader(
+            self.perfect_val_dataset,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,

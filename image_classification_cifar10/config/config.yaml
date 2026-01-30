@@ -9,7 +9,7 @@ gold_splitter:
   starts_with_train: True
 
 # Experiment settings
-split_method: gold  # Options: random, gold, or both
+split_method: gold  # Options: random, gold, perfect, or all
 train_ratio: 0.7
 val_ratio: 0.3
 
