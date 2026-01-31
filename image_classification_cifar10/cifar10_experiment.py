@@ -87,6 +87,8 @@ def run_experiment(
             "gold_val_indices": data_module.gold_val_indices,
             "sk_train_indices": data_module.sk_train_indices,
             "sk_val_indices": data_module.sk_val_indices,
+            "perfect_train_indices": data_module.perfect_train_indices,
+            "perfect_val_indices": data_module.perfect_val_indices,
             "duplicated": data_module.duplicated_train_indices,
             "excluded_indices": data_module.excluded_train_indices,
         },
