@@ -43,7 +43,7 @@ def run_experiment(
 ) -> dict:
     # make sure the transformer head is the same for all runs
     seed_everything(cfg.random_state)
-    model = Cifar10CNN(learning_rate=cfg.learning_rate)
+    model = Cifar10CNN(learning_rate=cfg.learning_rate, model_type=cfg.model_type)
 
     mlflow_logger = MLFlowLogger(
         experiment_name=f"{cfg.mlflow_experiment_name}_{data_module.settings_as_str}",
@@ -56,7 +56,6 @@ def run_experiment(
     mlflow_logger.log_hyperparams(
         {
             "split_method": split_method,
-            "train_ratio": cfg.train_ratio,
             "val_ratio": cfg.val_ratio,
             "random_state": cfg.random_state,
             "remove_ratio": cfg.remove_ratio,
@@ -68,9 +67,8 @@ def run_experiment(
             "batch_size": cfg.batch_size,
             "learning_rate": cfg.learning_rate,
             "splitting_duration": splitting_duration,
-            "splitting_chunk": cfg.gold_splitter.chunk,
-            "splitting_starts_with_train": cfg.gold_splitter.starts_with_train,
             "splitting_update_selection": cfg.gold_splitter.update_selection,
+            "model_type": cfg.model_type,
         }
     )
 
@@ -87,8 +85,6 @@ def run_experiment(
             "gold_val_indices": data_module.gold_val_indices,
             "sk_train_indices": data_module.sk_train_indices,
             "sk_val_indices": data_module.sk_val_indices,
-            "perfect_train_indices": data_module.perfect_train_indices,
-            "perfect_val_indices": data_module.perfect_val_indices,
             "duplicated": data_module.duplicated_train_indices,
             "excluded_indices": data_module.excluded_train_indices,
         },
@@ -130,21 +126,13 @@ def run_experiment(
     train_dataloader = (
         data_module.sk_train_dataloader()
         if split_method == "random"
-        else (
-            data_module.gold_train_dataloader()
-            if split_method == "gold"
-            else data_module.perfect_train_dataloader()
-        )
+        else data_module.gold_train_dataloader()
     )
     val_dataloaders = {
         "val": (
             data_module.sk_val_dataloader()
             if split_method == "random"
-            else (
-                data_module.gold_val_dataloader()
-                if split_method == "gold"
-                else data_module.perfect_val_dataloader()
-            )
+            else data_module.gold_val_dataloader()
         )
     }
     if cfg.validate_on_test:
@@ -207,7 +195,6 @@ def main(cfg: DictConfig):
         split_methods = [
             "gold",
             "random",
-            "perfect",
         ]
     else:
         split_methods = [cfg.split_method]

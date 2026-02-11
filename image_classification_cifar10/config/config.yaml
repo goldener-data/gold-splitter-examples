@@ -1,31 +1,30 @@
 # CIFAR-10 Split Comparison Experiment Configuration
 gold_splitter:
-  chunk: 500
   min_pxt_insert_size: 10000
   batch_size: 128
   num_workers: 15
   table_name: cifar10_dinov3small_224
   update_selection: True
-  starts_with_train: True
 
 # Experiment settings
-split_method: gold  # Options: random, gold, perfect, or all
-train_ratio: 0.7
+model_type: vit # cnn, resnet, vit
+split_method: gold  # Options: random, gold, or all
 val_ratio: 0.3
 
 data_dir: .data
 
 random_state: 42
-remove_ratio: 0.95
-duplicate_table_path: cifar10_dinov3small_224_duplicate
+
+remove_ratio: 0.98
+duplicate_table_path: duplicate_cifar10_dinov3small_224
 drop_duplicate_table: True
-to_duplicate_clusters: 4
-cluster_count: 50
-duplicate_per_sample: 25
+to_duplicate_clusters: 2
+cluster_count: 10
+duplicate_per_sample: 10
 
 random_split_state: 42
 
-max_epochs: 300
+max_epochs: 100
 batch_size: 256
 learning_rate: 0.001
 num_workers: 15

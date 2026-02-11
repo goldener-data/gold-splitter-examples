@@ -4,11 +4,9 @@ import hydra
 import timm
 import torch
 from PIL.Image import Image
-from sklearn.manifold import TSNE
 from goldener.describe import GoldDescriptor
 from goldener.extract import TorchGoldFeatureExtractor, TorchGoldFeatureExtractorConfig
-from goldener.select import GoldSelector
-from goldener.reduce import GoldReducer
+from goldener.select import GoldSelector, GoldGreedyClosestPointSelection
 from goldener.split import GoldSet, GoldSplitter
 from goldener.vectorize import (
     TensorVectorizer,
@@ -22,7 +20,7 @@ CIFAR10_PREPROCESS = Compose(
     [
         ToTensor(),
         Resize(224),
-        Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
+        Normalize((0.4850, 0.4560, 0.4060), (0.2290, 0.2240, 0.2250)),
     ]
 )
 
@@ -83,7 +81,6 @@ def get_gold_descriptor(
 def get_gold_splitter(
     splitter_cfg: DictConfig,
     name_prefix: str,
-    train_ratio: float,
     val_ratio: float,
     max_batches: int | None = None,
 ) -> GoldSplitter:
@@ -92,7 +89,6 @@ def get_gold_splitter(
     batch_size = splitter_config["batch_size"]
     num_workers = splitter_config["num_workers"]
     min_pxt_insert_size = splitter_config["min_pxt_insert_size"]
-    chunk = splitter_config["chunk"]
 
     to_keep_schema = {"label": pxt.String}
 
@@ -106,28 +102,25 @@ def get_gold_splitter(
         to_keep_schema=to_keep_schema,
     )
 
+    # Splitting will be done by moving iteratively to the validation set
+    # all the data with the closest distance to their neighbors
     selector = GoldSelector(
         table_path=f"{table_name}_selection",
-        reducer=GoldReducer(reducer=TSNE(n_components=2, random_state=42)),
+        selection_tool=GoldGreedyClosestPointSelection(
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        ),
+        reducer=None,
         vectorized_key="features",
         class_key="label",
-        chunk=chunk,
         to_keep_schema=to_keep_schema,
         batch_size=batch_size,
         num_workers=num_workers,
     )
 
-    sets = (
-        [
-            GoldSet(name="train", size=train_ratio),
-            GoldSet(name="val", size=val_ratio),
-        ]
-        if splitter_config["starts_with_train"]
-        else [
-            GoldSet(name="val", size=val_ratio),
-            GoldSet(name="train", size=train_ratio),
-        ]
-    )
+    sets = [
+        GoldSet(name="val", size=val_ratio),
+        GoldSet(name="train", size=1 - val_ratio),
+    ]
 
     return GoldSplitter(
         sets=sets,

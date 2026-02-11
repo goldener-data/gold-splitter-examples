@@ -86,6 +86,7 @@ class GoldCifar10(CIFAR10):
             self.excluded_indices = excluded
 
         # duplicate samples based on clustering if all duplication parameters are specified
+        # every new data added from duplication is an augmented version of the initial data
         self.duplicated_indices: list[int] = []
         duplication_params = (
             duplicate_table_path,
@@ -124,8 +125,15 @@ class GoldCifar10(CIFAR10):
 
             # perform clustering and duplication per label
             random_generator = np.random.default_rng(random_state)
+            duplication_transform = Compose(
+                [
+                    RandomHorizontalFlip(),
+                    ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+                    RandomRotation(degrees=15),
+                ]
+            )
             for label, features in features_per_label.items():
-                assert cluster_count is not None
+                assert cluster_count is not None and duplicate_per_sample is not None
                 label_indices = indices_per_label[label]
                 logger.info(f"Adding duplicates for label {label}")
                 kmeans = KMeans(
@@ -139,18 +147,23 @@ class GoldCifar10(CIFAR10):
                     replace=False,
                 )
                 logger.info(f"The selected clusters are {cluster_indices}")
-                for ci in cluster_indices:
-                    for i, cluster_id in enumerate(kmeans.labels_):
-                        if cluster_id == ci:
-                            to_add_data = np.vstack(
-                                [self.data[label_indices[i]][np.newaxis, ...]]
-                                * duplicate_per_sample  # type: ignore[operator]
-                            )
-                            self.data = np.vstack([self.data, to_add_data])
-                            self.targets.extend(
-                                [self.targets[label_indices[i]]] * duplicate_per_sample  # type: ignore[operator]
-                            )
-                            self.duplicated_indices.append(label_indices[i])
+
+                for data_idx, cluster_id in enumerate(kmeans.labels_):
+                    if cluster_id in cluster_indices:
+                        duplicated_idx = label_indices[data_idx]
+                        to_add_data = np.vstack(
+                            [
+                                duplication_transform(
+                                    self.data[duplicated_idx][np.newaxis, ...]
+                                )
+                                for _ in range(duplicate_per_sample)
+                            ]
+                        )
+                        self.data = np.vstack([self.data, to_add_data])
+                        self.targets.extend(
+                            [self.targets[duplicated_idx]] * duplicate_per_sample
+                        )
+                        self.duplicated_indices.append(duplicated_idx)
 
     def __len__(self) -> int:
         return len(self.data)
@@ -177,7 +190,6 @@ class CIFAR10DataModule(LightningDataModule):
 
         self.random_state = cfg["random_state"]
 
-        self.train_ratio = cfg["train_ratio"]
         self.val_ratio = cfg["val_ratio"]
 
         self.random_split_state = cfg["random_split_state"]
@@ -212,7 +224,6 @@ class CIFAR10DataModule(LightningDataModule):
         self.gold_splitter: GoldSplitter = get_gold_splitter(
             splitter_cfg=self.gold_splitter_cfg,
             name_prefix=self.settings_as_str,
-            train_ratio=self.train_ratio,
             val_ratio=self.val_ratio,
             max_batches=self.max_batches,
         )
@@ -226,18 +237,17 @@ class CIFAR10DataModule(LightningDataModule):
 
         self.excluded_train_indices: Subset
         self.duplicated_train_indices: list[int]
+
         self.gold_train_indices: list[int]
         self.gold_val_indices: list[int]
         self.gold_train_dataset: Subset
         self.gold_val_dataset: Subset
+
         self.sk_train_indices: list[int]
         self.sk_val_indices: list[int]
         self.sk_train_dataset: Subset
         self.sk_val_dataset: Subset
-        self.perfect_train_indices: list[int]
-        self.perfect_val_indices: list[int]
-        self.perfect_train_dataset: Subset
-        self.perfect_val_dataset: Subset
+
         self.test_dataset: GoldCifar10
 
     @property
@@ -245,8 +255,7 @@ class CIFAR10DataModule(LightningDataModule):
         return (
             f"settings_{self.random_state}_{self.remove_ratio}"
             f"_{self.cluster_count}_{self.to_duplicate_clusters}"
-            f"_{self.duplicate_per_sample}_{self.gold_splitter_cfg.chunk}"
-            f"_{self.gold_splitter_cfg.starts_with_train}"
+            f"_{self.duplicate_per_sample}"
         ).replace(".", "_")
 
     def prepare_data(self) -> None:
@@ -264,7 +273,11 @@ class CIFAR10DataModule(LightningDataModule):
                 count=self.train_count,
                 random_state=self.random_state,
                 remove_ratio=self.remove_ratio,
-                duplicate_table_path=f"{self.duplicate_table_path}_{self.settings_as_str}",
+                duplicate_table_path=(
+                    f"{self.duplicate_table_path}_{self.settings_as_str}"
+                    if self.duplicate_table_path is not None
+                    else None
+                ),
                 drop_duplicate_table=self.drop_duplicate_table,
                 to_duplicate_clusters=self.to_duplicate_clusters,
                 cluster_count=self.cluster_count,
@@ -295,30 +308,6 @@ class CIFAR10DataModule(LightningDataModule):
             self.gold_val_indices = list(splits["val"])
             self.gold_train_dataset = Subset(dataset, self.gold_train_indices)
             self.gold_val_dataset = Subset(dataset, self.gold_val_indices)
-
-            # make perfect training
-            no_dup_count = int(50000 * (1 - self.remove_ratio))
-            train_count = len(self.gold_train_indices)
-            self.perfect_train_indices = list(range(no_dup_count))
-            if train_count > no_dup_count:
-                not_selected = list(
-                    range(len(self.perfect_train_indices), len(dataset))
-                )
-                keep_in_train, self.perfect_val_indices = train_test_split(
-                    not_selected,
-                    test_size=len(dataset) - train_count,
-                    random_state=self.random_split_state,
-                    shuffle=True,
-                    stratify=dataset.targets_as_array[not_selected],
-                )
-                self.perfect_train_indices += keep_in_train
-            else:
-                raise ValueError(
-                    "too much initial training samples for perfect training."
-                )
-
-            self.perfect_train_dataset = Subset(dataset, self.perfect_train_indices)
-            self.perfect_val_dataset = Subset(dataset, self.perfect_val_indices)
 
         if stage == "test" or stage is None:
             self.test_dataset = GoldCifar10(
@@ -419,27 +408,6 @@ class CIFAR10DataModule(LightningDataModule):
     def gold_val_dataloader(self) -> DataLoader:
         return DataLoader(
             self.gold_val_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-            persistent_workers=True if self.num_workers > 0 else False,
-            pin_memory=True,
-        )
-
-    def perfect_train_dataloader(self) -> DataLoader:
-        return DataLoader(
-            self.perfect_train_dataset,
-            batch_size=self.batch_size,
-            shuffle=True,
-            num_workers=self.num_workers,
-            persistent_workers=True if self.num_workers > 0 else False,
-            pin_memory=True,
-            generator=torch.Generator().manual_seed(self.random_state),
-        )
-
-    def perfect_val_dataloader(self) -> DataLoader:
-        return DataLoader(
-            self.perfect_val_dataset,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,

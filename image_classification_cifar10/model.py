@@ -1,6 +1,6 @@
 from lightning import LightningModule
 import torch
-from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRSchedulerConfig
+from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRScheduler
 from torch.nn import (
     functional as F,
     Flatten,
@@ -14,35 +14,67 @@ from torch.nn import (
     Dropout,
 )
 from torchmetrics.classification import MulticlassAUROC
+import timm
+from timm.models.eva import Eva
 
 
 class Cifar10CNN(LightningModule):
     def __init__(
         self,
         learning_rate: float = 0.001,
+        model_type: str = "cnn",
     ) -> None:
         super().__init__()
         self.learning_rate = learning_rate
 
-        self.model = Sequential(
-            Conv2d(3, 32, kernel_size=3, padding=1),
-            BatchNorm2d(32),
-            ReLU(),
-            MaxPool2d(2),  # 32x16x16 for 32x32 inputs
-            Conv2d(32, 64, kernel_size=3, padding=1),
-            BatchNorm2d(64),
-            ReLU(),
-            MaxPool2d(2),  # 64x8x8
-            Conv2d(64, 128, kernel_size=3, padding=1),
-            BatchNorm2d(128),
-            ReLU(),
-            AdaptiveAvgPool2d(1),  # 128x1x1
-            Flatten(),
-            Dropout(0.2),
-            Linear(128, 10),
-        )
+        self.model: torch.nn.Module
+        self._setup_model(model_type)
 
         self.save_hyperparameters()
+
+    def _setup_model(self, model_type: str) -> None:
+        if model_type == "cnn":
+            # simple cnn model
+            self.model = Sequential(
+                Conv2d(3, 32, kernel_size=3, padding=1),
+                BatchNorm2d(32),
+                ReLU(),
+                MaxPool2d(2),  # 32x16x16 for 32x32 inputs
+                Conv2d(32, 64, kernel_size=3, padding=1),
+                BatchNorm2d(64),
+                ReLU(),
+                MaxPool2d(2),  # 64x8x8
+                Conv2d(64, 128, kernel_size=3, padding=1),
+                BatchNorm2d(128),
+                ReLU(),
+                AdaptiveAvgPool2d(1),  # 128x1x1
+                Flatten(),
+                Dropout(0.2),
+                Linear(128, 10),
+            )
+        elif model_type == "resnet":
+            # pretrained resnet
+            self.model = timm.create_model(
+                model_name="resnet18.a1_in1k",
+                pretrained=True,
+                num_classes=10,
+            )
+        elif model_type == "vit":
+            # pretrained dino ViT with only the head as trainable parameter
+            self.model = timm.create_model(
+                model_name="vit_small_patch16_dinov3.lvd1689m",
+                pretrained=True,
+                num_classes=10,
+                img_size=224,
+            )
+            # freeze all layers except the classifier head
+            assert isinstance(self.model, Eva)
+            for param in self.model.parameters():
+                param.requires_grad = False
+            for param in self.model.head.parameters():
+                param.requires_grad = True
+        else:
+            raise ValueError(f"Unsupported model type: {model_type}")
 
     @property
     def has_test_as_val(self) -> bool:
@@ -55,11 +87,13 @@ class Cifar10CNN(LightningModule):
 
     def on_train_start(self) -> None:
         self.train_auroc = MulticlassAUROC(num_classes=10)
+        self.train_pc_auroc = MulticlassAUROC(num_classes=10, average=None)
 
     def _step(
         self,
         batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
         auroc_metric: MulticlassAUROC,
+        auroc_pc_metric: MulticlassAUROC,
         prefix: str,
     ) -> torch.Tensor:
         x, y, _ = batch
@@ -77,6 +111,7 @@ class Cifar10CNN(LightningModule):
         # AUROC
         probs = F.softmax(logits, dim=1)
         auroc_metric.update(probs, y)
+        auroc_pc_metric.update(probs, y)
 
         return loss
 
@@ -86,21 +121,35 @@ class Cifar10CNN(LightningModule):
         prefix: str,
     ) -> None:
         auroc = auroc_metric.compute()
-        self.log(f"{prefix}_auroc", auroc, prog_bar=True)
+
+        if auroc.ndim == 0:
+            self.log(f"{prefix}_auroc", auroc, prog_bar=True)
+        else:
+            for i, class_auroc in enumerate(auroc):
+                self.log(f"{prefix}_auroc_class_{i}", class_auroc, prog_bar=True)
+
         auroc_metric.reset()
 
     def training_step(
         self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> STEP_OUTPUT:
-        return self._step(batch, self.train_auroc, "train")
+        return self._step(
+            batch=batch,
+            auroc_metric=self.train_auroc,
+            auroc_pc_metric=self.train_pc_auroc,
+            prefix="train",
+        )
 
     def on_train_epoch_end(self) -> None:
         self._compute_auroc_and_log(self.train_auroc, "train")
+        self._compute_auroc_and_log(self.train_pc_auroc, "train")
 
     def on_validation_epoch_start(self) -> None:
         self.val_auroc = MulticlassAUROC(num_classes=10)
+        self.val_pc_auroc = MulticlassAUROC(num_classes=10, average=None)
         if self.has_test_as_val:
             self.test_as_val_auroc = MulticlassAUROC(num_classes=10)
+            self.test_as_val_pc_auroc = MulticlassAUROC(num_classes=10, average=None)
 
     def validation_step(
         self,
@@ -117,47 +166,58 @@ class Cifar10CNN(LightningModule):
 
         loss = None
         if val_batch is not None:
-            loss = self._step(val_batch, self.val_auroc, "val")
+            loss = self._step(
+                batch=val_batch,
+                auroc_metric=self.val_auroc,
+                auroc_pc_metric=self.val_pc_auroc,
+                prefix="val",
+            )
+
         if test_batch is not None:
-            self._step(test_batch, self.test_as_val_auroc, "test_as_val")
+            self._step(
+                batch=test_batch,
+                auroc_metric=self.test_as_val_auroc,
+                auroc_pc_metric=self.test_as_val_pc_auroc,
+                prefix="test_as_val",
+            )
 
         return loss
 
     def on_validation_epoch_end(self) -> None:
         self._compute_auroc_and_log(self.val_auroc, "val")
+        self._compute_auroc_and_log(self.val_pc_auroc, "val")
 
         if self.has_test_as_val:
             self._compute_auroc_and_log(self.test_as_val_auroc, "test_as_val")
+            self._compute_auroc_and_log(self.test_as_val_pc_auroc, "test_as_val")
 
     def on_test_start(self) -> None:
         self.test_auroc = MulticlassAUROC(num_classes=10)
+        self.test_pc_auroc = MulticlassAUROC(num_classes=10, average=None)
 
     def test_step(
         self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> STEP_OUTPUT:
-        return self._step(batch, self.test_auroc, "test")
+        return self._step(
+            batch=batch,
+            auroc_metric=self.test_auroc,
+            auroc_pc_metric=self.test_pc_auroc,
+            prefix="test",
+        )
 
     def on_test_epoch_end(self) -> None:
-        test_auroc = self.test_auroc.compute()
-        self.log("test_auroc", test_auroc, prog_bar=True)
-        self.test_auroc.reset()
+        self._compute_auroc_and_log(
+            auroc_metric=self.test_auroc,
+            prefix="test",
+        )
+        self._compute_auroc_and_log(
+            auroc_metric=self.test_pc_auroc,
+            prefix="test",
+        )
 
     def configure_optimizers(
         self,
-    ) -> OptimizerLRSchedulerConfig:
+    ) -> OptimizerLRScheduler:
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            mode="max",
-            factor=0.5,
-            patience=5,
-        )
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "monitor": "val_auroc",
-                "interval": "epoch",
-                "frequency": 1,
-            },
-        }
+
+        return optimizer
