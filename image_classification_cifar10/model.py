@@ -18,7 +18,7 @@ import timm
 from timm.models.eva import Eva
 
 
-class Cifar10CNN(LightningModule):
+class Cifar10LightningModule(LightningModule):
     def __init__(
         self,
         learning_rate: float = 0.001,

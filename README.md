@@ -49,7 +49,7 @@ The pre-commit hooks will automatically run:
 
 ## Examples
 
-### 1. Image Classification: CIFAR-10 with simple CNN
+### 1. Image Classification: CIFAR-10 with different image classification models (ResNet, ViT, etc.)
 
 **Quick Start**:
 ```bash

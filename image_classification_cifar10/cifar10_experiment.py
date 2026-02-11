@@ -1,16 +1,10 @@
 """
 CIFAR-10 Split Comparison Experiment
 
-This script compares two data splitting strategies:
+This script allow to train different models on the CIFAR-10 dataset using two different data splitting strategies:
 1. Random split from scikit-learn
 2. Smart split using GoldSplitter from the Goldener library
 
-The experiment uses:
-- CIFAR-10 dataset from torchvision
-- Simple convolutional neural network
-- PyTorch Lightning for training management
-- MLFlow for experiment tracking
-- AUROC metric on validation set for model selection
 """
 
 import os
@@ -27,7 +21,7 @@ from lightning.pytorch.utilities.combined_loader import CombinedLoader
 
 
 from image_classification_cifar10.data import CIFAR10DataModule
-from image_classification_cifar10.model import Cifar10CNN
+from image_classification_cifar10.model import Cifar10LightningModule
 
 
 logger = getLogger(__name__)
@@ -43,7 +37,9 @@ def run_experiment(
 ) -> dict:
     # make sure the transformer head is the same for all runs
     seed_everything(cfg.random_state)
-    model = Cifar10CNN(learning_rate=cfg.learning_rate, model_type=cfg.model_type)
+    model = Cifar10LightningModule(
+        learning_rate=cfg.learning_rate, model_type=cfg.model_type
+    )
 
     mlflow_logger = MLFlowLogger(
         experiment_name=f"{cfg.mlflow_experiment_name}_{data_module.settings_as_str}",
@@ -216,13 +212,6 @@ def main(cfg: DictConfig):
         logger.info(f"\n{result['split_method'].upper()} Split Method:")
         logger.info(f"  Best Validation AUROC: {result['best_val_auroc']:.4f}")
         logger.info(f"  Test AUROC: {result['test_results']:.4f}")
-
-    if len(results) > 1:
-        logger.info(
-            f"\nAUROC Difference (Gold - Random): "
-            f"{results[1]['test_results'] - results[0]['test_results']:.4f}"
-        )
-
     logger.info("\n" + "=" * 60)
 
 

@@ -1,7 +1,7 @@
 # CIFAR-10 Split Comparison Experiment
 
 This experiment compares the two data splitting strategies for training
-a simple convolutional neural network on the CIFAR-10 dataset.
+for different image classification model type on the CIFAR-10 dataset.
 
 
 ## Table of Contents
@@ -24,10 +24,10 @@ but as well as the data split method to use and the settings for the GoldSplitte
 
 - **CIFAR10DataModule**: A specific Pytorch Datamodule allowing to load data from the CIFAR-10 dataset from torchvision
 (50,000 training images, 10,000 test images). Depending on the configuration, only a subset of the
-training images is used for training/validation.
+training images is used for training/validation. Duplication of some samples is as well possible.
 
-- **Cifar10CNN**: A specific Pytorch Lightning LightningModule allowing to train and evaluate a simple CNN model
-to make image classification for the CIFAR-p10 dataset.
+- **Cifar10LightningModule**: A specific Pytorch Lightning LightningModule allowing to train and evaluate different
+image classification models (ResNet-18, ViT-S, Dinov3 ViT-S) to make image classification for the CIFAR-p10 dataset.
 
 - **Trainer**: PyTorch Lightning Trainer for efficient training management allowing to handle training, validation and
 testing loops. It allows as well to checkpoint the best model based on validation AUROC metric.
@@ -62,29 +62,12 @@ Then navigate to `http://localhost:5000` in your browser.
 - **Test samples**: 10,000 images
 - **Image size**: initially 32×32 pixels but resized to 224×224, RGB color
 
-### Data Preprocessing
-
-```python
-Compose(
-  [
-    ToTensor(),
-    Resize(224),
-    Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
-  ]
-)
-```
 
 ### Training Configuration
 
 - **Optimizer**: Adam
   - Learning rate: 0.001 (default, configurable)
   - Weight decay: 0 (no L2 regularization)
-
-- **Learning Rate Scheduler**: ReduceLROnPlateau
-  - Monitor: Validation AUROC
-  - Mode: Maximize
-  - Factor: 0.5
-  - Patience: 5 epochs
 
 - **Loss Function**: CrossEntropyLoss
   - Applied to raw logits
