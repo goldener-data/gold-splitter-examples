@@ -84,6 +84,8 @@ class GoldCifar10(CIFAR10):
             self.data = self.data[training_indices]
             self.targets = [self.targets[i] for i in training_indices]
             self.excluded_indices = excluded
+        else:
+            self.excluded_indices = []
 
         # duplicate samples based on clustering if all duplication parameters are specified
         # every new data added from duplication is an augmented version of the initial data
@@ -164,6 +166,8 @@ class GoldCifar10(CIFAR10):
                             [self.targets[duplicated_idx]] * duplicate_per_sample
                         )
                         self.duplicated_indices.append(duplicated_idx)
+        else:
+            self.duplicated_indices = []
 
     def __len__(self) -> int:
         return len(self.data)
