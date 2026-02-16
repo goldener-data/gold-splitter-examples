@@ -16,6 +16,8 @@ from torchvision.transforms.v2 import (
     RandomHorizontalFlip,
     ColorJitter,
     RandomRotation,
+    ToTensor,
+    Resize,
 )
 from torchvision.datasets import VOCSegmentation
 from sklearn.model_selection import train_test_split
@@ -222,6 +224,14 @@ class VOCSegmentationDataModule(LightningDataModule):
             ]
             + self.transform.transforms
         )
+        # For masks, we only need to convert to tensor and resize
+        # No normalization should be applied to segmentation masks
+        self.mask_transform = Compose(
+            [
+                ToTensor(),
+                Resize(224, interpolation=torchvision.transforms.InterpolationMode.NEAREST),
+            ]
+        )
 
         self.gold_splitter: GoldSplitter = get_gold_splitter(
             splitter_cfg=self.gold_splitter_cfg,
@@ -276,7 +286,7 @@ class VOCSegmentationDataModule(LightningDataModule):
                 year="2012",
                 image_set="train",
                 transform=self.transform,
-                target_transform=self.transform,
+                target_transform=self.mask_transform,
                 download=False,
                 count=self.train_count,
                 random_state=self.random_state,
@@ -324,7 +334,7 @@ class VOCSegmentationDataModule(LightningDataModule):
                 year="2012",
                 image_set="val",
                 transform=self.transform,
-                target_transform=self.transform,
+                target_transform=self.mask_transform,
                 download=False,
             )
 
