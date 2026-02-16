@@ -1,0 +1,48 @@
+defaults:
+  - _self_
+
+gold_splitter:
+  min_pxt_insert_size: 1000
+  batch_size: 32
+  num_workers: 8
+  table_name: voc_seg_dinov3small_224
+  update_selection: True
+  n_clusters: 50
+
+exp:
+  split_method: gold  # Options: random, gold, or all
+  model: unet # unet, vit_seg
+  val_ratio: 0.3
+  max_epochs: 30
+  learning_rate: 0.001
+  batch_size: 16
+  validate_on_test: True
+  random_state: 42
+  checkpoint: checkpoints
+
+data:
+  cache: .data
+  remove_ratio: null
+  drop_duplicate_table: True
+  duplicate_table_path: null
+  to_duplicate_clusters: null
+  cluster_count: null
+  duplicate_per_sample: null
+  random_split_state: 42
+  num_workers: 8
+
+logging:
+  mlflow_tracking_uri: mlruns
+  mlflow_experiment_name: voc_segmentation
+  mlflow_run_name: voc_seg
+
+debug_count:
+  test_count: null  # Set to a number (e.g., 5) to limit validation/test batches for debugging. null = no limit
+  train_count: null  # Set to a number (e.g., 10) to limit training batches for debugging. null = no limit
+
+
+
+
+hydra:
+  job_logging:
+    version: 1
