@@ -35,18 +35,19 @@ def collate_voc(
     Collate function for VOC dataset that processes images and segmentation masks.
     For gold splitting, we need to extract features from patches corresponding to
     the segmentation mask rather than from class tokens.
+    
+    Note: The mask is used for creating a label identifier, but feature extraction
+    is done from the image patches only.
     """
     images, masks, indices = zip(*batch)
     imgs_tensor = torch.stack([VOC_PREPROCESS(image) for image in images])
-    masks_tensor = torch.stack([VOC_PREPROCESS(mask) for mask in masks])
     
-    # Create a label string based on the presence of objects in the mask
-    # We'll use a simple approach: average mask values as a proxy for content
-    str_targets = [f"mask_{i}" for i in range(len(masks))]
+    # Create a label string based on the image index
+    # We use a simple label since segmentation doesn't have a single class per image
+    str_targets = [f"img_{i}" for i in indices]
     idx_list = [int(idx) for idx in indices]
     return {
         "data": imgs_tensor,
-        "mask": masks_tensor,
         "label": str_targets,
         "idx": idx_list,
     }

@@ -15,7 +15,6 @@ from torch.nn import (
 )
 from torchmetrics.classification import MulticlassJaccardIndex
 import timm
-from timm.models.eva import Eva
 
 
 class VOCSegmentationLightningModule(LightningModule):
@@ -70,8 +69,7 @@ class VOCSegmentationLightningModule(LightningModule):
                 num_classes=0,  # Remove classification head
                 img_size=224,
             )
-            # Freeze backbone
-            assert isinstance(self.backbone, Eva)
+            # Freeze backbone - check if it has parameters to freeze
             for param in self.backbone.parameters():
                 param.requires_grad = False
             

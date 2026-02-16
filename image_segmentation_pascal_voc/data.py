@@ -170,17 +170,9 @@ class GoldVOCSegmentation(VOCSegmentation):
         return len(self.images)
 
     def __getitem__(self, index: int) -> Tuple:
-        if self.count is not None and index >= self.count:
-            raise IndexError("Index out of range for GoldVOCSegmentation with limited count.")
-        # Get image and mask
-        img = self._load_image(index)
-        mask = self._load_target(index)
-        
-        if self.transform is not None:
-            img = self.transform(img)
-        if self.target_transform is not None:
-            mask = self.target_transform(mask)
-            
+        # Call parent's __getitem__ to get image and mask using the proper API
+        img, mask = super().__getitem__(index)
+        # Parent class already applies transforms, so just add the index
         return img, mask, index
 
 
