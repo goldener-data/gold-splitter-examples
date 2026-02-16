@@ -1,10 +1,13 @@
+defaults:
+  - _self_
+
 gold_splitter:
   min_pxt_insert_size: 10000
   batch_size: 128
   num_workers: 15
   table_name: cifar10_dinov3small_224
   update_selection: True
-  n_clusters: 50
+  n_clusters: 100
 
 exp:
   split_method: gold  # Options: random, gold, or all
@@ -36,3 +39,10 @@ logging:
 debug_count:
   test_count: null  # Set to a number (e.g., 5) to limit validation/test batches for debugging. null = no limit
   train_count: null  # Set to a number (e.g., 10) to limit training batches for debugging. null = no limit
+
+
+
+
+hydra:
+  job_logging:
+    version: 1
