@@ -63,7 +63,7 @@ Then navigate to `http://localhost:5000` in your browser.
     dining table, dog, horse, motorbike, person, potted plant, sheep, sofa, train, tv/monitor
 - **Training samples**: 1,464 images with segmentation masks
 - **Validation samples**: 1,449 images with segmentation masks
-- **Image size**: Variable, resized to 224×224 for training
+- **Image size**: Variable, resized to 448×448 for training
 
 
 ### Training Configuration
@@ -104,121 +104,59 @@ checkpoint_callback = ModelCheckpoint(
 )
 ```
 
-## Key Differences from Image Classification
-
-This experiment extends the image classification experiment with several key differences:
-
-### 1. Task Type
-- **Classification**: Assign a single label to an entire image
-- **Segmentation**: Assign a label to each pixel in the image
-
-### 2. Dataset
-- **Classification**: CIFAR-10 (50,000 training images, 10 classes)
-- **Segmentation**: Pascal VOC 2012 (1,464 training images, 21 classes)
-
-### 3. Gold Splitting Approach
-
-**Image Classification (CIFAR-10)**:
-- Uses the **class token** from ViT (Vision Transformer)
-- The class token is a single embedding that represents the entire image
-- Extracted from `FilterLocation.START` (first token in the sequence)
-
-```python
-# Classification approach
-vectorizer=TensorVectorizer(
-    keep=Filter2DWithCount(keep=True, filter_location=FilterLocation.START),
-    channel_pos=2,
-)
-```
-
-**Image Segmentation (Pascal VOC)**:
-- Uses **patch embeddings** corresponding to the segmentation mask
-- Instead of a single token, we use all patch embeddings from ViT
-- Extracted from `FilterLocation.ALL` (all patch tokens, excluding class token)
-- This allows the splitting to be based on the spatial information relevant to segmentation
-
-```python
-# Segmentation approach
-vectorizer=TensorVectorizer(
-    keep=Filter2DWithCount(keep=True, filter_location=FilterLocation.ALL),
-    channel_pos=2,
-)
-```
-
-This difference is crucial because:
-- **Segmentation requires spatial information**: We need features that capture local patterns across the image
-- **Multiple regions per image**: A single image can contain multiple objects, each contributing to the split decision
-- **Mask-aware splitting**: The patch embeddings naturally align with the segmentation masks, making the split more representative of the segmentation task
-
-### 4. Model Architecture
-- **Classification**: ResNet, ViT with classification head
-- **Segmentation**: U-Net, ViT with segmentation head
-
-### 5. Evaluation Metric
-- **Classification**: AUROC (Area Under ROC Curve)
-- **Segmentation**: IoU (Intersection over Union)
-
 ## Split Strategies
 
-### 1. Random Split (Baseline)
+### Random Split (Baseline)
 
 ```python
 from sklearn.model_selection import train_test_split
 
 train_indices, val_indices = train_test_split(
-    range(len(dataset)),
-    test_size=0.3,
+    indices,
+    test_size=0.2,
     random_state=42,
     shuffle=True,
+    stratify=targets,
 )
 ```
 
 **Characteristics**:
 - Uniform probability for each sample
-- Simple random selection
+- Stratified selection to preserve class proportions per split
 - Standard practice in ML
-- Fast and straightforward
+- Simple and fast
 
-### 2. GoldSplitter (Smart Split)
+### GoldSplitter (Smart Split)
 
-The smart split is done from the **patch embeddings** of the Dinov3 ViT-S model that correspond to the segmentation mask.
+The smart split is done from the class token of the Dinov3 ViT-S model.
 
 ```python
-from image_segmentation_pascal_voc.utils import get_gold_splitter
+from image_classification_cifar10.utils import get_gold_splitter
 
 gold_splitter = get_gold_splitter(cfg.gold_splitter)
 split_table = gold_splitter.split_in_table(dataset)
 splits = gold_splitter.get_split_indices(
     split_table, selection_key="selected", idx_key="idx"
 )
-train_indices = list(splits["train"])
-val_indices = list(splits["val"])
+train_indices = np.array(list(splits["train"]))
+val_indices = np.array(list(splits["val"]))
 ```
 
 **Characteristics**:
-- Uses patch-level features from segmentation masks
-- Considers spatial distribution of objects
-- Aims for optimal distribution of diverse segmentation patterns
+- Considers class labels for balanced splits
+- Aims for optimal distribution
 - May lead to more representative validation sets
-- Potentially better generalization for segmentation tasks
-
-**Technical Implementation**:
-- Extracts features from ViT's intermediate layer (blocks.11)
-- Uses ALL patch tokens (excluding class token) to capture spatial information
-- Each image contributes multiple feature vectors (one per patch)
-- Splitting is based on these patch-level representations
+- Potentially better generalization
 
 ### Evaluation Criteria
 
 Compare the two methods on:
 - **Convergence Speed**: Epochs to reach best performance
 - **Stability**: Variance in validation metrics across epochs
-- **Test Performance**: Final IoU on held-out test set
-- **Segmentation Quality**: Visual quality of predicted masks
+- **Test Performance**: Final performance on held-out test set
 
 ## Viewing Results
 
-### MLFlow UI
 
 After running the experiment, start the MLFlow UI:
 ```bash
@@ -226,78 +164,3 @@ mlflow ui
 ```
 
 Then open `http://localhost:5000` in your browser to compare results between split methods.
-
-## Output Interpretation
-
-### Key Metrics to Compare
-
-1. **Validation IoU**: Higher is better
-   - Target: > 0.5 for reasonable segmentation
-   - Good: > 0.6
-   - Excellent: > 0.7
-
-2. **Pixel Accuracy**: Higher is better
-   - Baseline: ~0.7 (simple class imbalance)
-   - Good: > 0.85
-   - Excellent: > 0.90
-
-3. **Convergence**: Fewer epochs to reach plateau is better
-
-### Questions to Answer
-
-- Does GoldSplitter lead to faster convergence?
-- Is the validation performance more stable with GoldSplitter?
-- Does GoldSplitter result in better test set performance?
-- Are there differences in per-class IoU between methods?
-
-## Extending the Experiment
-
-### Adding New Models
-
-Edit `model.py` to add new segmentation architectures:
-
-```python
-elif model_type == "deeplabv3":
-    self.model = torchvision.models.segmentation.deeplabv3_resnet50(
-        num_classes=self.num_classes
-    )
-```
-
-### Modifying Split Strategy
-
-Edit `utils.py` to change the vectorization approach:
-
-```python
-# Example: Use different ViT layer
-extractor = TorchGoldFeatureExtractor(
-    TorchGoldFeatureExtractorConfig(
-        model=timm.create_model(...),
-        layers=["blocks.8"],  # Earlier layer
-    )
-)
-```
-
-### Adjusting Hyperparameters
-
-Edit `config/config.yaml` or use command line overrides:
-
-```bash
-python voc_experiment.py exp.batch_size=32 exp.learning_rate=0.0001
-```
-
-## Dependencies
-
-Dependencies are managed at the repository root level in `pyproject.toml`.
-
-Key dependencies for this experiment:
-- [Torchvision](https://pytorch.org/vision/stable/index.html): Pascal VOC dataset and transforms
-- [timm](https://github.com/huggingface/pytorch-image-models): Pre-trained vision models
-- [Pillow](https://python-pillow.org/): Image loading
-- [TorchMetrics](https://torchmetrics.readthedocs.io/): Jaccard Index (IoU) computation
-
-## References
-
-- [Pascal VOC Dataset](http://host.robots.ox.ac.uk/pascal/VOC/)
-- [Goldener Library](https://github.com/goldener-data/goldener)
-- [U-Net Paper](https://arxiv.org/abs/1505.04597)
-- [Vision Transformer Paper](https://arxiv.org/abs/2010.11929)

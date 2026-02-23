@@ -27,7 +27,7 @@ but as well as the data split method to use and the settings for the GoldSplitte
 training images is used for training/validation. Duplication of some samples is as well possible.
 
 - **Cifar10LightningModule**: A specific Pytorch Lightning LightningModule allowing to train and evaluate different
-image classification models (ResNet-18, ViT-S, Dinov3 ViT-S) to make image classification for the CIFAR-p10 dataset.
+image classification models (ResNet-18, ViT-S, custom CNN) for the CIFAR-p10 dataset.
 
 - **Trainer**: PyTorch Lightning Trainer for efficient training management allowing to handle training, validation and
 testing loops. It allows as well to checkpoint the best model based on validation AUROC metric.
@@ -73,7 +73,7 @@ Then navigate to `http://localhost:5000` in your browser.
   - Applied to raw logits
 
 - **Batch Size**: 256 (default, configurable)
-- **Max Epochs**: 40 (default, configurable)
+- **Max Epochs**: 50 (default, configurable)
 
 ### Evaluation Metrics
 
@@ -101,7 +101,7 @@ checkpoint_callback = ModelCheckpoint(
 
 ## Split Strategies
 
-### 1. Random Split (Baseline)
+### Random Split (Baseline)
 
 ```python
 from sklearn.model_selection import train_test_split
@@ -121,7 +121,7 @@ train_indices, val_indices = train_test_split(
 - Standard practice in ML
 - Simple and fast
 
-### 2. GoldSplitter (Smart Split)
+### GoldSplitter (Smart Split)
 
 The smart split is done from the class token of the Dinov3 ViT-S model.
 
@@ -153,18 +153,9 @@ Compare the two methods on:
 
 ## Viewing Results
 
-### MLFlow UI
-
 After running the experiment, start the MLFlow UI:
 ```bash
 mlflow ui
 ```
 
 Then open `http://localhost:5000` in your browser to compare results between split methods.
-
-## Dependencies
-
-Dependencies are managed at the repository root level in `pyproject.toml`.
-
-- [Torchvision](https://pytorch.org/vision/stable/index.html): CIFAR-10 dataset and transforms
-- [Pillow](https://python-pillow.org/): Image loading
