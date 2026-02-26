@@ -32,6 +32,10 @@ vision = [
     "timm",
     "pillow"
 ]
+text = [
+    "transformers",
+    "datasets",
+]
 
 
 [tool.uv]
