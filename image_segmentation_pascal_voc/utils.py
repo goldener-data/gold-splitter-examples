@@ -53,7 +53,7 @@ def collate_pascal_voc(
         assert isinstance(labels_input, set)
         labels.append(list(labels_input))
 
-        index = item["idx"]
+        index = item["index"]
         assert isinstance(index, int)
         indices.append(index)
 
