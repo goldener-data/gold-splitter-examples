@@ -80,11 +80,19 @@ class VOCSegmentationLightningModule(LightningModule):
 
     def on_train_start(self) -> None:
         self.train_iou = MulticlassJaccardIndex(num_classes=21).to(self.device)
+        self.train_micro_iou = MulticlassJaccardIndex(
+            num_classes=21, average="micro"
+        ).to(self.device)
+        self.train_pc_iou = MulticlassJaccardIndex(num_classes=21, average=None).to(
+            self.device
+        )
 
     def _step(
         self,
         batch: dict[str, torch.Tensor | list[list[str]] | list[int]],
         iou_metric: MulticlassJaccardIndex,
+        iou_pc_metric: MulticlassJaccardIndex,
+        iou_micro_metric: MulticlassJaccardIndex,
         prefix: str,
     ) -> torch.Tensor:
         x = batch["image"]
@@ -102,12 +110,23 @@ class VOCSegmentationLightningModule(LightningModule):
         preds = transform_segmentation_logits_to_rgb_preds(
             logits, self.RGB_TO_CLASS_IDX
         )
-        acc = (preds == y).float().mean()
+        preds_mono = transform_rgb_mask_to_mono_mask(preds, self.RGB_TO_CLASS_IDX)
+        y_mono = transform_rgb_mask_to_mono_mask(y, self.RGB_TO_CLASS_IDX)
+
+        acc = (preds_mono == y_mono).float().mean()
         self.log(f"{prefix}_acc", acc, on_step=False, on_epoch=True, prog_bar=True)
 
         iou_metric.update(
-            transform_rgb_mask_to_mono_mask(preds, self.RGB_TO_CLASS_IDX),
-            transform_rgb_mask_to_mono_mask(y, self.RGB_TO_CLASS_IDX),
+            preds_mono,
+            y_mono,
+        )
+        iou_pc_metric.update(
+            preds_mono,
+            y_mono,
+        )
+        iou_micro_metric.update(
+            preds_mono,
+            y_mono,
         )
 
         return loss
@@ -118,7 +137,13 @@ class VOCSegmentationLightningModule(LightningModule):
         prefix: str,
     ) -> None:
         iou = iou_metric.compute()
-        self.log(f"{prefix}_iou", iou, prog_bar=True)
+
+        if iou.ndim == 0:
+            self.log(f"{prefix}_iou", iou, prog_bar=True)
+        else:
+            for i, class_iou in enumerate(iou):
+                self.log(f"{prefix}_iou_class_{i}", class_iou, prog_bar=False)
+
         iou_metric.reset()
 
     def training_step(
@@ -129,18 +154,35 @@ class VOCSegmentationLightningModule(LightningModule):
         return self._step(
             batch=batch,
             iou_metric=self.train_iou,
+            iou_pc_metric=self.train_pc_iou,
+            iou_micro_metric=self.train_micro_iou,
             prefix="train",
         )
 
     def on_train_epoch_end(self) -> None:
         self._compute_iou_and_log(self.train_iou, "train")
+        self._compute_iou_and_log(self.train_pc_iou, "train")
+        self._compute_iou_and_log(self.train_micro_iou, "train")
 
     def on_validation_epoch_start(self) -> None:
         self.val_iou = MulticlassJaccardIndex(num_classes=21).to(self.device)
+        self.val_pc_iou = MulticlassJaccardIndex(num_classes=21, average=None).to(
+            self.device
+        )
+        self.val_micro_iou = MulticlassJaccardIndex(num_classes=21, average="micro").to(
+            self.device
+        )
+
         if self.has_test_as_val:
             self.test_as_val_iou = MulticlassJaccardIndex(num_classes=21).to(
                 self.device
             )
+            self.test_as_val_pc_iou = MulticlassJaccardIndex(
+                num_classes=21, average=None
+            ).to(self.device)
+            self.test_as_val_micro_iou = MulticlassJaccardIndex(
+                num_classes=21, average="micro"
+            ).to(self.device)
 
     def validation_step(
         self,
@@ -160,6 +202,8 @@ class VOCSegmentationLightningModule(LightningModule):
             loss = self._step(
                 batch=val_batch,  # type: ignore[arg-type]
                 iou_metric=self.val_iou,
+                iou_pc_metric=self.val_pc_iou,
+                iou_micro_metric=self.val_micro_iou,
                 prefix="val",
             )
 
@@ -167,6 +211,8 @@ class VOCSegmentationLightningModule(LightningModule):
             self._step(
                 batch=test_batch,  # type: ignore[arg-type]
                 iou_metric=self.test_as_val_iou,
+                iou_pc_metric=self.test_as_val_pc_iou,
+                iou_micro_metric=self.test_as_val_micro_iou,
                 prefix="test_as_val",
             )
 
@@ -174,12 +220,20 @@ class VOCSegmentationLightningModule(LightningModule):
 
     def on_validation_epoch_end(self) -> None:
         self._compute_iou_and_log(self.val_iou, "val")
+        self._compute_iou_and_log(self.val_pc_iou, "val")
 
         if self.has_test_as_val:
             self._compute_iou_and_log(self.test_as_val_iou, "test_as_val")
+            self._compute_iou_and_log(self.test_as_val_pc_iou, "test_as_val")
 
     def on_test_start(self) -> None:
         self.test_iou = MulticlassJaccardIndex(num_classes=21).to("cuda")
+        self.test_pc_iou = MulticlassJaccardIndex(num_classes=21, average=None).to(
+            "cuda"
+        )
+        self.test_micro_iou = MulticlassJaccardIndex(
+            num_classes=21, average="micro"
+        ).to("cuda")
 
     def test_step(
         self,
@@ -189,12 +243,22 @@ class VOCSegmentationLightningModule(LightningModule):
         return self._step(
             batch=batch,
             iou_metric=self.test_iou,
+            iou_pc_metric=self.test_pc_iou,
+            iou_micro_metric=self.test_micro_iou,
             prefix="test",
         )
 
     def on_test_epoch_end(self) -> None:
         self._compute_iou_and_log(
             iou_metric=self.test_iou,
+            prefix="test",
+        )
+        self._compute_iou_and_log(
+            iou_metric=self.test_pc_iou,
+            prefix="test",
+        )
+        self._compute_iou_and_log(
+            iou_metric=self.test_micro_iou,
             prefix="test",
         )
 

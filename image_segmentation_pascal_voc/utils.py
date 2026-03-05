@@ -192,7 +192,8 @@ def transform_rgb_mask_to_class_mask(
     y: torch.Tensor, rgb_to_class_idx: dict[tuple[int, int, int], int]
 ) -> torch.Tensor:
     b, _, h, w = y.shape
-    new_y = torch.zeros((b, 21, h, w), dtype=y.dtype, device=y.device)
+    n_channels = len(set(rgb_to_class_idx.values()))
+    new_y = torch.zeros((b, n_channels, h, w), dtype=y.dtype, device=y.device)
     unique_targets = get_unique_values_in_tensor(y)
 
     for unique_target in unique_targets:

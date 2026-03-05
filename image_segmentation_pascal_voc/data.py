@@ -318,6 +318,7 @@ class VOCSegmentationDataModule(LightningDataModule):
             pin_memory=True,
             generator=torch.Generator().manual_seed(self.random_state),
             collate_fn=collate_pascal_voc,
+            drop_last=True,
         )
 
     def sk_val_dataloader(self) -> DataLoader:
@@ -329,6 +330,7 @@ class VOCSegmentationDataModule(LightningDataModule):
             persistent_workers=True if self.num_workers > 0 else False,
             pin_memory=True,
             collate_fn=collate_pascal_voc,
+            drop_last=True,
         )
 
     def gold_train_dataloader(self) -> DataLoader:
@@ -341,6 +343,7 @@ class VOCSegmentationDataModule(LightningDataModule):
             pin_memory=True,
             generator=torch.Generator().manual_seed(self.random_state),
             collate_fn=collate_pascal_voc,
+            drop_last=True,
         )
 
     def gold_val_dataloader(self) -> DataLoader:
