@@ -8,16 +8,15 @@ This script allows training different segmentation models on the Pascal VOC data
 The key difference from image classification is that the splitting is done based on
 patches corresponding to the segmentation mask (ground truth/target) rather than class tokens.
 """
-
+import logging
 import os
 import time
-from logging import getLogger, WARNING
+from logging import getLogger
 from pathlib import Path
 
 import hydra
 import mlflow
 from omegaconf import DictConfig
-import pixeltable as pxt
 from lightning import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
@@ -30,7 +29,7 @@ from image_segmentation_pascal_voc.model import VOCSegmentationLightningModule
 
 logger = getLogger(__name__)
 
-pxt.configure_logging(to_stdout=True, level=WARNING, remove="goldener")
+logging.getLogger("sqlalchemy.engine").setLevel(logging.CRITICAL)
 
 
 def run_experiment(

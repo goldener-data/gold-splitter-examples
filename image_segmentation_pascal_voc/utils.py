@@ -1,9 +1,13 @@
+from collections import defaultdict
+
+import numpy as np
 import pixeltable as pxt
 
 import hydra
 import timm
 import torch
 from goldener.torch_utils import get_unique_values_in_tensor
+from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
 from sklearn.cluster import KMeans
 from goldener.vision.transform import PatchifyImageMask
 from goldener.vision.vectorizers import get_vit_patch_tokens_vectorizer
@@ -11,8 +15,8 @@ from goldener import (
     GoldSKLearnClusteringTool,
     GoldClusterizer,
     GoldDescriptor,
-    TorchGoldEmbeddingTool,
-    TorchGoldEmbeddingToolConfig,
+    GoldTorchEmbeddingTool,
+    GoldTorchEmbeddingToolConfig,
     GoldSelector,
     GoldGreedyKCenterSelectionTool,
     GoldSet,
@@ -77,15 +81,17 @@ def get_gold_descriptor(
         torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
     )
 
-    embedder = TorchGoldEmbeddingTool(
-        TorchGoldEmbeddingToolConfig(
+    embedder = GoldTorchEmbeddingTool(
+        GoldTorchEmbeddingToolConfig(
             model=timm.create_model(
                 model_name="vit_small_patch16_dinov3.lvd1689m",
                 pretrained=True,
                 img_size=224,
                 device=device,
             ),
-            layers=["blocks.11"],
+            layers=[
+                "blocks.11",
+            ],
         )
     )
 
@@ -94,14 +100,16 @@ def get_gold_descriptor(
     # Then we can filter based on the segmentation mask
     patchify_mask = PatchifyImageMask(patch_size=16, match_ratio=0.85)
 
+    tensor_vectorizer = get_vit_patch_tokens_vectorizer(
+        transform_y=patchify_mask.transform,
+        generator=torch.Generator().manual_seed(42),
+        n_random=5,
+    )
+
     return GoldDescriptor(
         table_path=table_name,
         embedder=embedder,
-        vectorizer=get_vit_patch_tokens_vectorizer(
-            transform_y=patchify_mask.transform,
-            n_random=5,
-            generator=torch.Generator().manual_seed(42),
-        ),
+        vectorizer=tensor_vectorizer,
         collate_fn=collate_pascal_voc,
         to_keep_schema=to_keep_schema,
         data_key="image",
@@ -241,3 +249,48 @@ def transform_rgb_mask_to_mono_mask(
         mono_mask[mask.unsqueeze(1)] = class_index
 
     return mono_mask
+
+
+def multilabel_iterative_train_test_split(
+    index_labels: dict[int, set[str]],
+    test_size: float,
+    random_state: int | None = None,
+) -> tuple[list[int], list[int]]:
+    """
+    Perform an iterative stratified train-test split for multi-label data.
+
+    Args:
+        index_labels : the labels for all indices
+        test_size: The proportion of the dataset to include in the test set.
+        random_seed : Random seed for reproducibility.
+
+    Returns:
+        indices_train (list[int]): List of indices for the training set.
+        indices_val (list[int]): List of indices for the validation set.
+
+    """
+    label_indices = defaultdict(list)
+    for idx, labels in index_labels.items():
+        for label in labels:
+            label_indices[label].append(idx)
+
+    # create multi-hot encoding for each sample
+    y = np.zeros((len(index_labels), len(label_indices)), dtype=int)
+    for label_idx, indices in enumerate(label_indices.values()):
+        y[indices, label_idx] = 1
+
+    # create x listing the index of each sample
+    x = np.array(list(index_labels.keys())).reshape(-1, 1)
+
+    # sample iteratively to maintain label distribution
+    stratifier = MultilabelStratifiedShuffleSplit(
+        n_splits=1,
+        test_size=test_size,
+        random_state=random_state,
+    )
+
+    train_indexes, test_indexes = next(stratifier.split(x, y))
+
+    x_train, x_test = x[train_indexes, :], x[test_indexes, :]
+
+    return x_train.flatten().tolist(), x_test.flatten().tolist()

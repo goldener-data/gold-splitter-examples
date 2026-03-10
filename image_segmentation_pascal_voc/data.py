@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
 from typing import Callable, Literal
+from tqdm import tqdm
 
 import torch
 from lightning import LightningDataModule
@@ -27,6 +28,7 @@ from image_segmentation_pascal_voc.utils import (
     get_gold_descriptor,
     PASCAL_VOC_PREPROCESS,
     collate_pascal_voc,
+    multilabel_iterative_train_test_split,
 )
 
 logger = getLogger(__name__)
@@ -249,6 +251,33 @@ class VOCSegmentationDataModule(LightningDataModule):
         PascalVOC2012Segmentation(root=self.data_dir, split="train", override=False)
         PascalVOC2012Segmentation(root=self.data_dir, split="val", override=False)
 
+    def _get_index_labels(
+        self, dataset: GoldPascalVOC2012Segmentation
+    ) -> dict[int, set[str]]:
+        dataloader = DataLoader(
+            dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            persistent_workers=True,
+            pin_memory=True,
+            collate_fn=lambda batch_list: batch_list,
+        )
+
+        index_label = {}
+
+        for batch in tqdm(dataloader, desc="Getting labels per index"):
+            for sample in batch:
+                index_label[sample["index"]] = set(
+                    [
+                        label
+                        for label in sample["labels"]
+                        if label not in ("void", "background")
+                    ]
+                )
+
+        return index_label
+
     def setup(self, stage: str | None = None) -> None:
         if stage == "fit" or stage is None:
             val_dataset = GoldPascalVOC2012Segmentation(
@@ -282,11 +311,13 @@ class VOCSegmentationDataModule(LightningDataModule):
             self.gold_val_indices = list(splits["val"])
 
             # make random splitting with sklearn
-            self.sk_train_indices, self.sk_val_indices = train_test_split(
-                range(len(val_dataset)),
-                test_size=int(self.val_ratio * len(val_dataset)),
+            (
+                self.sk_train_indices,
+                self.sk_val_indices,
+            ) = multilabel_iterative_train_test_split(
+                self._get_index_labels(val_dataset),
+                test_size=self.val_ratio,
                 random_state=self.random_split_state,
-                shuffle=True,
             )
 
             # assign datasets

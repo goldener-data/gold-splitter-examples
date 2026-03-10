@@ -25,6 +25,7 @@ dependencies = [
     "torchmetrics",
     "hydra-core",
     "any-gold",
+    "iterative-stratification",
 ]
 
 [project.optional-dependencies]
@@ -43,6 +44,8 @@ dev-dependencies = [
     "pre-commit",
     "pytest",
     "notebook",
+    "plotly",
+    "types-tqdm",
 ]
 
 [project.urls]

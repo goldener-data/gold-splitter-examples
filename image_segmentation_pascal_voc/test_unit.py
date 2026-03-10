@@ -5,14 +5,16 @@ from image_segmentation_pascal_voc.utils import (
     transform_rgb_mask_to_class_mask,
     transform_segmentation_logits_to_rgb_preds,
     transform_rgb_mask_to_mono_mask,
+    multilabel_iterative_train_test_split,
 )
 
 from image_segmentation_pascal_voc.data import GoldPascalVOC2012Segmentation
 
-GoldPascalVOC2012Segmentation(".data", override=True)
-
 
 class TestGoldVOCSegmentation:
+    def __init__(self):
+        GoldPascalVOC2012Segmentation(".data", override=True)
+
     def test_simple_usage(self):
         dataset = GoldPascalVOC2012Segmentation(".data")
         assert len(dataset) > 0
@@ -166,3 +168,69 @@ class TestMaskConversions:
 
         with pytest.raises(ValueError):
             transform_rgb_mask_to_class_mask(mask, rgb_to_class_idx)
+
+
+class TestMultilabelIterativeTrainTestSplit:
+    def test_basic_split_ratio(self):
+        """Test that the split returns the correct ratio of samples."""
+        label_indices = {
+            0: set(["a", "b", "c", "d"]),
+            1: set(["b", "c", "d", "e"]),
+            2: set(["c", "d", "e", "f"]),
+            3: set(["a", "b", "c", "d"]),
+            4: set(["b", "c", "d", "e"]),
+            5: set(["c", "d", "e", "f"]),
+            6: set(["a", "b", "c", "d"]),
+            7: set(["b", "c", "d", "e"]),
+            8: set(["c", "d", "e", "f"]),
+            9: set(["a", "b", "c", "d"]),
+        }
+        test_size = 0.3
+        train_indices, test_indices = multilabel_iterative_train_test_split(
+            label_indices, test_size=test_size, random_seed=42
+        )
+
+        total_samples = 10
+        expected_train_size = 7
+        expected_test_size = 3
+
+        assert len(train_indices) == expected_train_size
+        assert len(test_indices) == expected_test_size
+        assert len(train_indices) + len(test_indices) == total_samples
+
+        train_set = set(train_indices)
+        test_set = set(test_indices)
+        assert not train_set.intersection(test_set)
+        assert len(train_set) == len(train_indices)
+        assert len(test_set) == len(test_indices)
+
+    def test_reproducibility(self):
+        """Test that same seed produces same results."""
+        label_indices = {
+            0: set(["a", "b", "c", "d"]),
+            1: set(["b", "c", "d", "e"]),
+            2: set(["c", "d", "e", "f"]),
+            3: set(["a", "b", "c", "d"]),
+            4: set(["b", "c", "d", "e"]),
+            5: set(["c", "d", "e", "f"]),
+            6: set(["a", "b", "c", "d"]),
+            7: set(["b", "c", "d", "e"]),
+            8: set(["c", "d", "e", "f"]),
+            9: set(["a", "b", "c", "d"]),
+        }
+
+        train1, test1 = multilabel_iterative_train_test_split(
+            label_indices, test_size=0.7, random_seed=42
+        )
+        train2, test2 = multilabel_iterative_train_test_split(
+            label_indices, test_size=0.7, random_seed=42
+        )
+
+        assert train1 == train2
+        assert test1 == test2
+
+        train2, test2 = multilabel_iterative_train_test_split(
+            label_indices, test_size=0.7, random_seed=123
+        )
+        assert train1 != train2
+        assert test1 != test2

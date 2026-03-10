@@ -10,8 +10,8 @@ from goldener import (
     GoldSKLearnClusteringTool,
     GoldClusterizer,
     GoldDescriptor,
-    TorchGoldEmbeddingTool,
-    TorchGoldEmbeddingToolConfig,
+    GoldTorchEmbeddingTool,
+    GoldTorchEmbeddingToolConfig,
     GoldGreedyKCenterSelectionTool,
     GoldSelector,
     GoldSet,
@@ -55,8 +55,8 @@ def get_gold_descriptor(
         torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
     )
 
-    embedder = TorchGoldEmbeddingTool(
-        TorchGoldEmbeddingToolConfig(
+    embedder = GoldTorchEmbeddingTool(
+        GoldTorchEmbeddingToolConfig(
             model=timm.create_model(
                 model_name="vit_small_patch16_dinov3.lvd1689m",
                 pretrained=True,
