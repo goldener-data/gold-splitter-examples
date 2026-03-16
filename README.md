@@ -63,7 +63,23 @@ uv run python cifar10_experiment.py
 
 See the [detailed README](image_classification_cifar10/README.md) for more information.
 
-### 2. Text Classification: IMDb Movie Reviews with CNN and BERT-Base
+### 2. Image Segmentation: Pascal VOC with different segmentation models (U-Net, ViT-Seg, etc.)
+
+This experiment extends the image classification approach to semantic segmentation. The key difference is that **gold splitting is done from patches corresponding to the segmentation mask** (ground truth/target) rather than from class tokens. This allows the splitting strategy to consider the spatial distribution of objects in the image.
+
+**Quick Start**:
+```bash
+# Install dependencies (from repo root)
+uv sync --extra vision
+
+# Run experiment
+cd image_segmentation_pascal_voc
+uv run python voc_experiment.py
+```
+
+See the [detailed README](image_segmentation_pascal_voc/README.md) for more information.
+
+### 3. Text Classification: IMDb Movie Reviews with CNN and BERT-Base
 
 **Quick Start**:
 ```bash
@@ -76,6 +92,7 @@ uv run python imdb_experiment.py
 ```
 
 See the [detailed README](text_classification_imdb/README.md) for more information.
+
 
 ## About Goldener
 
