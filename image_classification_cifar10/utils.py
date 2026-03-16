@@ -10,10 +10,10 @@ from goldener import (
     GoldSKLearnClusteringTool,
     GoldClusterizer,
     GoldDescriptor,
-    TorchGoldFeatureExtractor,
-    TorchGoldFeatureExtractorConfig,
+    GoldTorchEmbeddingTool,
+    GoldTorchEmbeddingToolConfig,
+    GoldGreedyKCenterSelectionTool,
     GoldSelector,
-    GoldGreedyKCenterSelection,
     GoldSet,
     GoldSplitter,
 )
@@ -55,8 +55,8 @@ def get_gold_descriptor(
         torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
     )
 
-    extractor = TorchGoldFeatureExtractor(
-        TorchGoldFeatureExtractorConfig(
+    embedder = GoldTorchEmbeddingTool(
+        GoldTorchEmbeddingToolConfig(
             model=timm.create_model(
                 model_name="vit_small_patch16_dinov3.lvd1689m",
                 pretrained=True,
@@ -69,7 +69,7 @@ def get_gold_descriptor(
 
     return GoldDescriptor(
         table_path=table_name,
-        extractor=extractor,
+        embedder=embedder,
         vectorizer=get_vit_class_token_vectorizer(),
         collate_fn=collate_cifar10,
         to_keep_schema=to_keep_schema,
@@ -105,7 +105,7 @@ def get_gold_splitter(
             clustering_tool=GoldSKLearnClusteringTool(
                 KMeans(n_clusters=n_clusters, random_state=42, n_init="auto")
             ),
-            vectorized_key="features",
+            vectorized_key="embeddings",
             min_pxt_insert_size=min_pxt_insert_size,
             batch_size=batch_size,
             num_workers=num_workers,
@@ -121,15 +121,13 @@ def get_gold_splitter(
         to_keep_schema=to_keep_schema,
     )
 
-    # Splitting will be done by moving iteratively to the validation set
-    # all the data with the closest distance to their neighbors
     selector = GoldSelector(
         table_path=f"{table_name}_selection",
-        selection_tool=GoldGreedyKCenterSelection(
+        selection_tool=GoldGreedyKCenterSelectionTool(
             device="cuda:0" if torch.cuda.is_available() else "cpu"
         ),
         reducer=None,
-        vectorized_key="features",
+        vectorized_key="embeddings",
         label_key="label",
         to_keep_schema=to_keep_schema,
         batch_size=batch_size,

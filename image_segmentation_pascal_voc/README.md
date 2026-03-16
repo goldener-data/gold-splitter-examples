@@ -1,14 +1,14 @@
-# CIFAR-10 Split Comparison Experiment
+# Pascal VOC Segmentation Split Comparison Experiment
 
-This experiment compares the two data splitting strategies for training
-for different image classification model type on the CIFAR-10 dataset.
-
+This experiment compares two data splitting strategies for training
+image segmentation models on the Pascal VOC 2012 dataset.
 
 ## Table of Contents
 
-- [Main components](#main-components)
+- [Main Components](#main-components)
 - [Quick Start](#quick-start)
 - [Technical Details](#technical-details)
+- [Key Differences from Image Classification](#key-differences-from-image-classification)
 - [Split Strategies](#split-strategies)
 - [Viewing Results](#viewing-results)
 - [Output Interpretation](#output-interpretation)
@@ -16,21 +16,21 @@ for different image classification model type on the CIFAR-10 dataset.
 - [References](#references)
 
 
-## Main components
+## Main Components
 
 - **Configuration**: The experiment is configured from a config file loaded from Hydra for flexible configuration management.
-It allows to specify the hyperparameters and logging parameter for the model training/evaluation
-but as well as the data split method to use and the settings for the GoldSplitter.
+It allows specifying the hyperparameters and logging parameters for the model training/evaluation
+as well as the data split method to use and the settings for the GoldSplitter.
 
-- **CIFAR10DataModule**: A specific Pytorch Datamodule allowing to load data from the CIFAR-10 dataset from torchvision
-(50,000 training images, 10,000 test images). Depending on the configuration, only a subset of the
+- **VOCSegmentationDataModule**: A specific Pytorch DataModule allowing to load data from the Pascal VOC 2012 dataset
+(1,464 training images, 1,449 validation images). Depending on the configuration, only a subset of the
 training images is used for training/validation. Duplication of some samples is as well possible.
 
-- **Cifar10LightningModule**: A specific Pytorch Lightning LightningModule allowing to train and evaluate different
-image classification models (ResNet-18, ViT-S, custom CNN) for the CIFAR-p10 dataset.
+- **VOCSegmentationLightningModule**: A specific Pytorch Lightning LightningModule allowing to train and evaluate different
+image segmentation models (U-Net, ViT-based segmentation) for the Pascal VOC dataset.
 
 - **Trainer**: PyTorch Lightning Trainer for efficient training management allowing to handle training, validation and
-testing loops. It allows as well to checkpoint the best model based on validation AUROC metric.
+testing loops. It checkpoints the best model based on validation IoU metric.
 
 - **Logging**: MLFlow for experiment tracking allowing to compare the different splitting strategies based on the logged metrics.
 
@@ -41,10 +41,10 @@ testing loops. It allows as well to checkpoint the best model based on validatio
 uv sync --extra vision
 
 # Make sure you're in the experiment directory
-cd image_classification_cifar10
+cd image_segmentation_pascal_voc
 
 # Run both split methods (uses default config)
-uv run python cifar10_experiment.py
+uv run python voc_experiment.py
 
 # View results
 mlflow ui
@@ -55,12 +55,15 @@ Then navigate to `http://localhost:5000` in your browser.
 
 ## Technical Details
 
-### Dataset: CIFAR-10
+### Dataset: Pascal VOC 2012
 
-- **Classes**: 10 object categories (airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck)
-- **Training samples**: 50,000 images (5000 per class)
-- **Test samples**: 10,000 images
-- **Image size**: initially 32×32 pixels but resized to 224×224, RGB color
+- **Task**: Semantic segmentation
+- **Classes**: 21 classes (20 object categories + background)
+  - Background, aeroplane, bicycle, bird, boat, bottle, bus, car, cat, chair, cow,
+    dining table, dog, horse, motorbike, person, potted plant, sheep, sofa, train, tv/monitor
+- **Training samples**: 1,464 images with segmentation masks
+- **Validation samples**: 1,449 images with segmentation masks
+- **Image size**: Variable, resized to 448×448 for training
 
 
 ### Training Configuration
@@ -70,30 +73,32 @@ Then navigate to `http://localhost:5000` in your browser.
   - Weight decay: 0 (no L2 regularization)
 
 - **Loss Function**: CrossEntropyLoss
-  - Applied to raw logits
+  - Applied to pixel-wise predictions
+  - Ignore index: 255 (void/unlabeled pixels)
 
-- **Batch Size**: 256 (default, configurable)
-- **Max Epochs**: 50 (default, configurable)
+- **Batch Size**: 16 (default, configurable)
+- **Max Epochs**: 30 (default, configurable)
 
 ### Evaluation Metrics
 
 **Primary Metric (for model selection)**:
-- **AUROC (Area Under ROC Curve)**: Measures the model's ability to distinguish between classes
-  - Task: Multiclass classification
-  - Used for: Model checkpoint selection (best validation AUROC)
+- **IoU (Intersection over Union)**: Also known as Jaccard Index, measures the overlap between predicted and ground truth segmentation masks
+  - Task: Multiclass segmentation
+  - Used for: Model checkpoint selection (best validation IoU)
+  - Formula: IoU = |A ∩ B| / |A ∪ B|
 
 **Secondary Metrics**:
-- **Accuracy**: Percentage of correct predictions
+- **Pixel Accuracy**: Percentage of correctly classified pixels
 
 All metrics are computed and logged for both training and validation sets at each epoch.
 
 ### Model Selection
 
-The best model is selected based on **maximum validation AUROC**:
+The best model is selected based on **maximum validation IoU**:
 
 ```python
 checkpoint_callback = ModelCheckpoint(
-    monitor='val_auroc',
+    monitor='val_iou',
     mode='max',
     save_top_k=1
 )
@@ -143,7 +148,6 @@ val_indices = np.array(list(splits["val"]))
 - May lead to more representative validation sets
 - Potentially better generalization
 
-
 ### Evaluation Criteria
 
 Compare the two methods on:
@@ -152,6 +156,7 @@ Compare the two methods on:
 - **Test Performance**: Final performance on held-out test set
 
 ## Viewing Results
+
 
 After running the experiment, start the MLFlow UI:
 ```bash

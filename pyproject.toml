@@ -24,13 +24,16 @@ dependencies = [
     "scikit-learn",
     "torchmetrics",
     "hydra-core",
+    "any-gold",
+    "iterative-stratification",
 ]
 
 [project.optional-dependencies]
 vision = [
     "torchvision",
     "timm",
-    "pillow"
+    "pillow",
+    "segmentation_models_pytorch"
 ]
 
 
@@ -41,6 +44,8 @@ dev-dependencies = [
     "pre-commit",
     "pytest",
     "notebook",
+    "plotly",
+    "types-tqdm",
 ]
 
 [project.urls]
