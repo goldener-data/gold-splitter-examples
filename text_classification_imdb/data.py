@@ -16,15 +16,6 @@ logger = getLogger(__name__)
 
 
 class IMDbDataset(Dataset):
-    """IMDb Movie Reviews dataset with WordPiece tokenization.
-
-    Args:
-        split: HuggingFace dataset split – ``"train"`` or ``"test"``.
-        tokenizer_name: Name of the pretrained tokenizer (WordPiece).
-        max_length: Maximum token sequence length (shorter texts are padded).
-        count: Optional limit on the number of samples (for debugging).
-    """
-
     def __init__(
         self,
         split: str = "train",
@@ -38,10 +29,6 @@ class IMDbDataset(Dataset):
         self._data = raw
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         self.max_length = max_length
-
-    # ------------------------------------------------------------------
-    # Dataset interface
-    # ------------------------------------------------------------------
 
     def __len__(self) -> int:
         return len(self._data)
@@ -62,7 +49,6 @@ class IMDbDataset(Dataset):
 
     @property
     def targets(self) -> list[int]:
-        """Return all labels as a list (for stratified splitting)."""
         return [int(item["label"]) for item in self._data]
 
     @property
@@ -77,17 +63,6 @@ class IMDbDataset(Dataset):
 
 
 class IMDbDataModule(LightningDataModule):
-    """Lightning DataModule for IMDb sentiment classification.
-
-    Prepares two split strategies:
-    - **Random split** via scikit-learn :func:`train_test_split`.
-    - **Smart split** via GoldSplitter from the Goldener library.
-
-    Args:
-        cfg: Hydra DictConfig with keys ``data``, ``exp``, ``gold_splitter``,
-            ``logging``, and ``debug_count``.
-    """
-
     def __init__(self, cfg: DictConfig) -> None:
         super().__init__()
 
@@ -139,10 +114,6 @@ class IMDbDataModule(LightningDataModule):
 
         self.test_dataset: IMDbDataset
 
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
-
     @property
     def settings_as_str(self) -> str:
         return (
@@ -156,12 +127,7 @@ class IMDbDataModule(LightningDataModule):
 
         return AutoTokenizer.from_pretrained(self.tokenizer_name).vocab_size
 
-    # ------------------------------------------------------------------
-    # LightningDataModule interface
-    # ------------------------------------------------------------------
-
     def prepare_data(self) -> None:
-        """Download the IMDb dataset (cached by HuggingFace datasets)."""
         load_dataset("imdb")
 
     def setup(self, stage: str | None = None) -> None:
@@ -201,10 +167,6 @@ class IMDbDataModule(LightningDataModule):
                 max_length=self.max_length,
                 count=self.test_count,
             )
-
-    # ------------------------------------------------------------------
-    # DataLoaders
-    # ------------------------------------------------------------------
 
     def sk_train_dataloader(self) -> DataLoader:
         return DataLoader(

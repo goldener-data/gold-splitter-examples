@@ -13,39 +13,28 @@ logger = getLogger(__name__)
 
 
 class TextCNNModel(nn.Module):
-    """Simple 1D CNN for text classification using WordPiece token ids.
-
-    Architecture: Embedding → parallel Conv1D with multiple kernel sizes →
-    adaptive max-pool → concatenation → dropout → linear classifier.
-    """
-
     def __init__(
         self,
-        vocab_size: int,
-        embed_dim: int = 128,
-        num_filters: int = 128,
-        kernel_sizes: list[int] | None = None,
-        dropout: float = 0.3,
-        padding_idx: int = 0,
     ) -> None:
         super().__init__()
-        if kernel_sizes is None:
-            kernel_sizes = [3, 4, 5]
-        self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=padding_idx)
+
+        kernel_sizes = [3, 4, 5]
+        self.embedding = nn.Embedding(30522, 128, padding_idx=0)
         self.convs = nn.ModuleList(
             [
                 nn.Sequential(
-                    nn.Conv1d(embed_dim, num_filters, kernel_size=k),
+                    nn.Conv1d(128, 128, kernel_size=k),
                     nn.ReLU(),
                 )
                 for k in kernel_sizes
             ]
         )
-        self.dropout = nn.Dropout(dropout)
-        self.fc = nn.Linear(num_filters * len(kernel_sizes), 1)
+        self.dropout = nn.Dropout(0.3)
+        self.fc = nn.Linear(128 * len(kernel_sizes), 1)
 
     def forward(
-        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
+        self,
+        input_ids: torch.Tensor,
     ) -> torch.Tensor:
         x = self.embedding(input_ids)  # (batch, seq_len, embed_dim)
         x = x.transpose(1, 2)  # (batch, embed_dim, seq_len)
@@ -56,57 +45,32 @@ class TextCNNModel(nn.Module):
 
 
 class BertClassifier(nn.Module):
-    """BERT-Base classifier for binary text classification.
-
-    Uses the CLS token output from BERT followed by a linear classification head.
-    """
-
     def __init__(
         self,
-        pretrained_model: str = "bert-base-uncased",
-        dropout: float = 0.1,
-        freeze_bert: bool = False,
     ) -> None:
         super().__init__()
-        self.bert = AutoModel.from_pretrained(pretrained_model)
-        if freeze_bert:
-            for param in self.bert.parameters():
-                param.requires_grad = False
+        self.bert = AutoModel.from_pretrained("google-bert/bert-base-uncased")
+        for param in self.bert.parameters():
+            param.requires_grad = False
         hidden_size = self.bert.config.hidden_size
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(0.1)
         self.classifier = nn.Linear(hidden_size, 1)
 
-    def forward(
-        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
-    ) -> torch.Tensor:
-        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+    def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
+        outputs = self.bert(input_ids=input_ids)
         cls_output = outputs.last_hidden_state[:, 0, :]
         x = self.dropout(cls_output)
         return self.classifier(x).squeeze(-1)  # (batch,)
 
 
 class IMDbLightningModule(LightningModule):
-    """Lightning module for binary sentiment classification on IMDb.
-
-    Supports two model architectures:
-    - ``cnn``: Simple 1D CNN with WordPiece embeddings.
-    - ``bert``: Fine-tuned BERT-Base with a linear classification head.
-
-    Metrics logged: binary cross-entropy loss, BinaryAUROC, and accuracy.
-    """
-
     def __init__(
         self,
         learning_rate: float = 2e-5,
         model_type: str = "cnn",
-        vocab_size: int = 30522,
-        pretrained_model: str = "bert-base-uncased",
     ) -> None:
         super().__init__()
         self.learning_rate = learning_rate
-        self.vocab_size = vocab_size
-        self.pretrained_model = pretrained_model
-
         self.model: torch.nn.Module
         self._setup_model(model_type)
 
@@ -114,16 +78,14 @@ class IMDbLightningModule(LightningModule):
 
     def _setup_model(self, model_type: str) -> None:
         if model_type == "cnn":
-            self.model = TextCNNModel(vocab_size=self.vocab_size)
+            self.model = TextCNNModel()
         elif model_type == "bert":
-            self.model = BertClassifier(pretrained_model=self.pretrained_model)
+            self.model = BertClassifier()
         else:
             raise ValueError(f"Unsupported model type: {model_type}")
 
-    def forward(
-        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
-    ) -> torch.Tensor:
-        return self.model(input_ids=input_ids, attention_mask=attention_mask)
+    def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
+        return self.model(input_ids=input_ids)
 
     def on_train_start(self) -> None:
         self.train_auroc = BinaryAUROC()

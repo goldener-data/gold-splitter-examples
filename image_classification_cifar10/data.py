@@ -368,7 +368,7 @@ class CIFAR10DataModule(LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.num_workers,
-            persistent_workers=True if self.num_workers > 0 else False,
+            persistent_workers=self.num_workers > 0,
             pin_memory=True,
             generator=torch.Generator().manual_seed(self.random_state),
         )
@@ -379,7 +379,7 @@ class CIFAR10DataModule(LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
-            persistent_workers=True if self.num_workers > 0 else False,
+            persistent_workers=self.num_workers > 0,
             pin_memory=True,
         )
 
@@ -389,7 +389,7 @@ class CIFAR10DataModule(LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.num_workers,
-            persistent_workers=True if self.num_workers > 0 else False,
+            persistent_workers=self.num_workers > 0,
             pin_memory=True,
             generator=torch.Generator().manual_seed(self.random_state),
         )
@@ -400,7 +400,7 @@ class CIFAR10DataModule(LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
-            persistent_workers=True if self.num_workers > 0 else False,
+            persistent_workers=self.num_workers > 0,
             pin_memory=True,
         )
 
@@ -410,6 +410,6 @@ class CIFAR10DataModule(LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
-            persistent_workers=True if self.num_workers > 0 else False,
+            persistent_workers=self.num_workers > 0,
             pin_memory=True,
         )

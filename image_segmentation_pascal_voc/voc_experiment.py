@@ -92,6 +92,7 @@ def run_experiment(
             "splitting_duration": splitting_duration,
             "splitting_update_selection": cfg.gold_splitter.update_selection,
             "model_type": model_type,
+            "n_clusters": cfg.gold_splitter.n_clusters,
         }
     )
 

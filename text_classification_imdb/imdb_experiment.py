@@ -47,8 +47,6 @@ def run_experiment(
     model = IMDbLightningModule(
         learning_rate=cfg.exp.learning_rate,
         model_type=model_type,
-        vocab_size=data_module.vocab_size,
-        pretrained_model=cfg.data.tokenizer_name,
     )
 
     mlflow_logger = MLFlowLogger(
