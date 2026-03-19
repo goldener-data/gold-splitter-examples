@@ -72,6 +72,7 @@ class IMDbDataModule(LightningDataModule):
 
         self.random_state: int = cfg.exp.random_state
         self.val_ratio: float = cfg.exp.val_ratio
+        self.split_method = cfg.exp.split_method
         self.random_split_state: int = cfg.data.random_split_state
 
         self.batch_size: int = cfg.exp.batch_size
@@ -140,25 +141,27 @@ class IMDbDataModule(LightningDataModule):
             )
 
             # Random splitting with sklearn (stratified)
-            self.sk_train_indices, self.sk_val_indices = train_test_split(
-                range(len(full_dataset)),
-                test_size=int(self.val_ratio * len(full_dataset)),
-                random_state=self.random_split_state,
-                shuffle=True,
-                stratify=full_dataset.targets_as_array,
-            )
-            self.sk_train_dataset = Subset(full_dataset, self.sk_train_indices)
-            self.sk_val_dataset = Subset(full_dataset, self.sk_val_indices)
+            if self.split_method in ("random", "all"):
+                self.sk_train_indices, self.sk_val_indices = train_test_split(
+                    range(len(full_dataset)),
+                    test_size=int(self.val_ratio * len(full_dataset)),
+                    random_state=self.random_split_state,
+                    shuffle=True,
+                    stratify=full_dataset.targets_as_array,
+                )
+                self.sk_train_dataset = Subset(full_dataset, self.sk_train_indices)
+                self.sk_val_dataset = Subset(full_dataset, self.sk_val_indices)
 
             # Smart splitting with GoldSplitter
-            split_table = self.gold_splitter.split_in_table(full_dataset)
-            splits = self.gold_splitter.get_split_indices(
-                split_table, selection_key="selected", idx_key="idx"
-            )
-            self.gold_train_indices = list(splits["train"])
-            self.gold_val_indices = list(splits["val"])
-            self.gold_train_dataset = Subset(full_dataset, self.gold_train_indices)
-            self.gold_val_dataset = Subset(full_dataset, self.gold_val_indices)
+            if self.split_method in ("gold", "all"):
+                split_table = self.gold_splitter.split_in_table(full_dataset)
+                splits = self.gold_splitter.get_split_indices(
+                    split_table, selection_key="selected", idx_key="idx"
+                )
+                self.gold_train_indices = list(splits["train"])
+                self.gold_val_indices = list(splits["val"])
+                self.gold_train_dataset = Subset(full_dataset, self.gold_train_indices)
+                self.gold_val_dataset = Subset(full_dataset, self.gold_val_indices)
 
         if stage == "test" or stage is None:
             self.test_dataset = IMDbDataset(
