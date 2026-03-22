@@ -69,6 +69,11 @@ class GoldPascalVOC2012Segmentation(PascalVOC2012Segmentation):
         # keep only a subset if remove_ratio is specified
         # The removal is done randomly
         if remove_ratio is not None:
+            multilabel_iterative_train_test_split(
+                self.get_index_labels(self.batch_size, self.num_workers),
+                test_size=self.val_ratio,
+                random_state=self.random_split_state,
+            )
             training_indices, excluded = train_test_split(
                 range(len(self.samples)),
                 test_size=remove_ratio,
@@ -146,6 +151,36 @@ class GoldPascalVOC2012Segmentation(PascalVOC2012Segmentation):
                         self.duplicated_indices.append(duplicated_idx)
         else:
             self.duplicated_indices = []
+
+    def get_index_labels(
+        self,
+        batch_size: int = 32,
+        num_workers: int = 8,
+    ) -> dict[int, set[str]]:
+        dataloader = DataLoader(
+            self,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            persistent_workers=True,
+            pin_memory=True,
+            collate_fn=lambda batch_list: batch_list,
+            drop_last=False,
+        )
+
+        index_label = {}
+
+        for batch in tqdm(dataloader, desc="Getting labels per index"):
+            for sample in batch:
+                index_label[sample["index"]] = set(
+                    [
+                        label
+                        for label in sample["labels"]
+                        if label not in ("void", "background")
+                    ]
+                )
+
+        return index_label
 
 
 class VOCSegmentationDataModule(LightningDataModule):
@@ -240,37 +275,6 @@ class VOCSegmentationDataModule(LightningDataModule):
         PascalVOC2012Segmentation(root=self.data_dir, split="train", override=False)
         PascalVOC2012Segmentation(root=self.data_dir, split="val", override=False)
 
-    @staticmethod
-    def get_index_labels(
-        dataset: GoldPascalVOC2012Segmentation,
-        batch_size: int = 32,
-        num_workers: int = 8,
-    ) -> dict[int, set[str]]:
-        dataloader = DataLoader(
-            dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            num_workers=num_workers,
-            persistent_workers=True,
-            pin_memory=True,
-            collate_fn=lambda batch_list: batch_list,
-            drop_last=False,
-        )
-
-        index_label = {}
-
-        for batch in tqdm(dataloader, desc="Getting labels per index"):
-            for sample in batch:
-                index_label[sample["index"]] = set(
-                    [
-                        label
-                        for label in sample["labels"]
-                        if label not in ("void", "background")
-                    ]
-                )
-
-        return index_label
-
     def setup(self, stage: str | None = None) -> None:
         if stage == "fit" or stage is None:
             val_dataset = GoldPascalVOC2012Segmentation(
@@ -308,7 +312,7 @@ class VOCSegmentationDataModule(LightningDataModule):
                 self.sk_train_indices,
                 self.sk_val_indices,
             ) = multilabel_iterative_train_test_split(
-                self.get_index_labels(val_dataset, self.batch_size, self.num_workers),
+                val_dataset.get_index_labels(self.batch_size, self.num_workers),
                 test_size=self.val_ratio,
                 random_state=self.random_split_state,
             )
