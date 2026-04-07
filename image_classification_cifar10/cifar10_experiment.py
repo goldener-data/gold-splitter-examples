@@ -47,7 +47,7 @@ def run_experiment(
     mlflow_logger = MLFlowLogger(
         experiment_name=f"{cfg.logging.mlflow_experiment_name}_{data_module.settings_as_str}",
         tracking_uri=cfg.logging.mlflow_tracking_uri,
-        run_name=f"{cfg.logging.mlflow_run_name}_{split_method}_{model_type}_{cfg.data.random_split_state}",
+        run_name=f"{cfg.logging.mlflow_run_name}_{split_method}_{model_type}_{cfg.data.random_split_state}_{cfg.data.random_shuffle_state}",
         log_model=True,
     )
 

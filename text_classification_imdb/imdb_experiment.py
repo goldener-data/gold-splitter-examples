@@ -52,7 +52,7 @@ def run_experiment(
     mlflow_logger = MLFlowLogger(
         experiment_name=f"{cfg.logging.mlflow_experiment_name}_{data_module.settings_as_str}",
         tracking_uri=cfg.logging.mlflow_tracking_uri,
-        run_name=f"{cfg.logging.mlflow_run_name}_{split_method}_{model_type}_{cfg.data.random_split_state}",
+        run_name=f"{cfg.logging.mlflow_run_name}_{split_method}_{model_type}_{cfg.data.random_split_state}_{cfg.data.random_shuffle_state}",
         log_model=True,
     )
 
@@ -68,6 +68,7 @@ def run_experiment(
             "tokenizer_name": cfg.data.tokenizer_name,
             "max_length": cfg.data.max_length,
             "random_split_state": cfg.data.random_split_state,
+            "random_shuffle_state": cfg.data.random_shuffle_state,
             "splitting_duration": splitting_duration,
             "splitting_update_selection": cfg.gold_splitter.update_selection,
             "n_clusters": cfg.gold_splitter.n_clusters,

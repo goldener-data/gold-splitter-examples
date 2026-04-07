@@ -72,7 +72,7 @@ def run_experiment(
     mlflow_logger = MLFlowLogger(
         experiment_name=f"{cfg.logging.mlflow_experiment_name}_{data_module.settings_as_str}",
         tracking_uri=cfg.logging.mlflow_tracking_uri,
-        run_name=f"{cfg.logging.mlflow_run_name}_{split_method}_{model_type}_{cfg.data.random_split_state}",
+        run_name=f"{cfg.logging.mlflow_run_name}_{split_method}_{model_type}_{cfg.data.random_split_state}_{cfg.data.random_shuffle_state}",
         log_model=True,
     )
 
@@ -86,6 +86,7 @@ def run_experiment(
             "cluster_count": cfg.data.cluster_count,
             "duplicate_per_sample": cfg.data.duplicate_per_sample,
             "random_split_state": cfg.data.random_split_state,
+            "random_shuffle_state": cfg.data.random_shuffle_state,
             "max_epochs": cfg.exp.max_epochs,
             "batch_size": cfg.exp.batch_size,
             "learning_rate": cfg.exp.learning_rate,
