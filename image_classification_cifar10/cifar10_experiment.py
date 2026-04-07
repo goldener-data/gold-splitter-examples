@@ -66,6 +66,7 @@ def run_experiment(
             "cluster_count": cfg.data.cluster_count,
             "duplicate_per_sample": cfg.data.duplicate_per_sample,
             "random_split_state": cfg.data.random_split_state,
+            "random_shuffle_state": cfg.data.random_shuffle_state,
             "splitting_duration": splitting_duration,
             "splitting_update_selection": cfg.gold_splitter.update_selection,
             "n_clusters": cfg.gold_splitter.n_clusters,
