@@ -24,7 +24,6 @@ from goldener.reduce import GoldSKLearnReductionTool
 from omegaconf import DictConfig
 from torchvision.transforms.v2 import Compose, ToTensor, Normalize, Resize
 
-from utils.clustering import NormmalizedKMeans
 
 CIFAR10_PREPROCESS = Compose(
     [
@@ -181,8 +180,8 @@ def get_gold_batcher(
         pxt.drop_table(cluster_table_path, if_not_exists="ignore")
         pxt.drop_table(description_table_path, if_not_exists="ignore")
 
-    sklearn_tool = NormmalizedKMeans(
-        n_clusters=batch_size,
+    sklearn_tool = KMeans(
+        n_clusters=n_clusters,
         random_state=42,
     )
     reducer = GoldSKLearnReductionTool(PCA(n_components=2, random_state=0))

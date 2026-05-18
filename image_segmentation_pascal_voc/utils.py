@@ -28,7 +28,6 @@ from goldener.organize import GoldClusterizedBatchSampler, ExhaustedClusterStrat
 from omegaconf import DictConfig
 from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype, ToImage
 
-from utils.clustering import NormmalizedKMeans
 
 PASCAL_VOC_PREPROCESS = Compose(
     [
@@ -202,6 +201,8 @@ def get_gold_batcher(
     num_workers = goldener_config.num_workers
     min_pxt_insert_size = goldener_config.min_pxt_insert_size
     n_clusters = goldener_config.n_clusters_batcher
+    if n_clusters is None:
+        n_clusters = batch_size
 
     table_name = f"{name_prefix}_{goldener_config.table_name}"
     cluster_table_path = f"{table_name}_batcher_cluster"
@@ -210,8 +211,8 @@ def get_gold_batcher(
         pxt.drop_table(cluster_table_path, if_not_exists="ignore")
         pxt.drop_table(description_table_path, if_not_exists="ignore")
 
-    sklearn_tool = NormmalizedKMeans(
-        n_clusters=batch_size,
+    sklearn_tool = KMeans(
+        n_clusters=n_clusters,
         random_state=42,
     )
     reducer = GoldSKLearnReductionTool(PCA(n_components=2, random_state=0))
