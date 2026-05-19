@@ -1,8 +1,11 @@
+import math
+
 import pixeltable as pxt
 import torch
+from k_means_constrained import KMeansConstrained
+from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from torch.utils.data import Subset
-from sklearn.cluster import KMeans
 from transformers import AutoModel
 
 from goldener import (
@@ -23,8 +26,6 @@ from goldener import (
 from goldener.organize import GoldClusterizedBatchSampler, ExhaustedClusterStrategy
 
 from omegaconf import DictConfig
-
-from utils.clustering import NormmalizedKMeans
 
 
 def collate_imdb(
@@ -164,19 +165,24 @@ def get_gold_batcher(
     min_pxt_insert_size = goldener_config.min_pxt_insert_size
     pretrained_model = goldener_config.pretrained_model
     n_clusters = goldener_config.n_clusters_batcher
+    if n_clusters is None:
+        n_clusters = batch_size
+    n_components = goldener_config.n_components_batcher
 
     table_name = f"{name_prefix}_{goldener_config.table_name}"
-    cluster_table_path = f"{table_name}_batcher_cluster"
-    description_table_path = f"{table_name}_batcher_description"
+    cluster_table_path = f"{table_name}_{n_clusters}_batcher_cluster"
+    description_table_path = f"{table_name}_{n_components}_batcher_description"
     if update_batch:
         pxt.drop_table(cluster_table_path, if_not_exists="ignore")
         pxt.drop_table(description_table_path, if_not_exists="ignore")
 
-    sklearn_tool = NormmalizedKMeans(
-        n_clusters=batch_size,
+    sklearn_tool = KMeansConstrained(
+        n_clusters=n_clusters,
+        size_min=math.floor(len(dataset) / n_clusters),
+        size_max=math.ceil(len(dataset) / n_clusters),
         random_state=42,
     )
-    reducer = GoldSKLearnReductionTool(PCA(n_components=2, random_state=0))
+    reducer = GoldSKLearnReductionTool(PCA(n_components=10, random_state=0))
 
     clusterizer = GoldClusterizer(
         table_path=cluster_table_path,
