@@ -104,7 +104,7 @@ class IMDbLightningModule(LightningModule):
 
         logits = self(input_ids)
         loss = F.binary_cross_entropy_with_logits(logits, labels.float())
-        self.log(f"{prefix}_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log(f"{prefix}_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
 
         probs = torch.sigmoid(logits)
         auroc_metric.update(probs, labels)
