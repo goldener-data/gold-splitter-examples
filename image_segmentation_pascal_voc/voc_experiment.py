@@ -88,7 +88,7 @@ def run_experiment(
             "model_type": model_type,
             "n_clusters": cfg.goldener_config.n_clusters,
             "n_clusters_batcher": cfg.goldener_config.n_clusters_batcher,
-            "n_component_batcher": cfg.goldener_config.n_component_batcher,
+            "n_components_batcher": cfg.goldener_config.n_components_batcher,
         }
     )
 
