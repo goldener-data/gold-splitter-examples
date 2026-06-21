@@ -9,7 +9,7 @@ goldener_config:
   update_selection: True
   update_batch: True
   n_clusters: 0
-  n_clusters_batcher: 25
+  n_clusters_batcher: 50
   n_components_batcher: 2
 
 exp:

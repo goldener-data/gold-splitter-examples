@@ -174,6 +174,7 @@ def get_gold_batcher(
     table_name = f"{name_prefix}_{goldener_config.table_name}"
     cluster_table_path = f"{table_name}_{n_clusters}_batcher_cluster"
     description_table_path = f"{table_name}_{n_components}_batcher_description"
+
     if update_batch:
         pxt.drop_table(cluster_table_path, if_not_exists="ignore")
         pxt.drop_table(description_table_path, if_not_exists="ignore")
@@ -184,7 +185,8 @@ def get_gold_batcher(
             size_min=math.floor(len(dataset) / n_clusters),
             size_max=math.ceil(len(dataset) / n_clusters),
             random_state=42,
-        )
+        ),
+        n_clusters=n_clusters,
     )
     reducer = GoldSKLearnReductionTool(PCA(n_components=10, random_state=0))
 
@@ -195,6 +197,7 @@ def get_gold_batcher(
         ),
         reducer=reducer,
         vectorized_key="embeddings",
+        to_keep_schema={"label": pxt.String},
         min_pxt_insert_size=min_pxt_insert_size,
         batch_size=goldener_batch_size,
         num_workers=num_workers,
@@ -207,6 +210,7 @@ def get_gold_batcher(
         num_workers=num_workers,
         pretrained_model=pretrained_model,
         max_batches=max_batches,
+        to_keep_schema={"label": pxt.String},
     )
 
     return GoldClusterizedBatchSampler(

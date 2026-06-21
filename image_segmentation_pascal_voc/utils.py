@@ -221,7 +221,8 @@ def get_gold_batcher(
             size_min=math.floor(len(dataset) / n_clusters),
             size_max=math.ceil(len(dataset) / n_clusters),
             random_state=42,
-        )
+        ),
+        n_clusters=n_clusters,
     )
     reducer = (
         GoldSKLearnReductionTool(PCA(n_components=n_components, random_state=0))

@@ -7,9 +7,11 @@ class NormmalizedSKLearnClustering:
     def __init__(
         self,
         tool: ClusterMixin,
+        n_clusters: int,
     ):
         self.tool = tool
         self.normalizer = Normalizer()
+        self.n_clusters = n_clusters
 
     def fit(
         self,

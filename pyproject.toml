@@ -37,6 +37,7 @@ vision = [
 ]
 text = [
     "transformers",
+    "sentence-transformers",
     "datasets",
 ]
 reports = [

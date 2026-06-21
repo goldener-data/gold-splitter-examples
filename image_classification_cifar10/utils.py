@@ -1,10 +1,7 @@
-import math
-
 import pixeltable as pxt
 
 import timm
 import torch
-from k_means_constrained import KMeansConstrained
 from sklearn.decomposition import PCA
 from torch.utils.data import Subset
 from PIL.Image import Image
@@ -27,7 +24,6 @@ from goldener.reduce import GoldSKLearnReductionTool
 from omegaconf import DictConfig
 from torchvision.transforms.v2 import Compose, ToTensor, Normalize, Resize
 
-from utils.clustering import NormmalizedSKLearnClustering
 
 CIFAR10_PREPROCESS = Compose(
     [
@@ -185,13 +181,9 @@ def get_gold_batcher(
         pxt.drop_table(cluster_table_path, if_not_exists="ignore")
         pxt.drop_table(description_table_path, if_not_exists="ignore")
 
-    sklearn_tool = NormmalizedSKLearnClustering(
-        tool=KMeansConstrained(
-            n_clusters=n_clusters,
-            size_min=math.floor(len(dataset) / n_clusters),
-            size_max=math.ceil(len(dataset) / n_clusters),
-            random_state=42,
-        )
+    sklearn_tool = KMeans(
+        n_clusters=n_clusters,
+        random_state=42,
     )
     reducer = (
         GoldSKLearnReductionTool(PCA(n_components=n_components, random_state=0))
@@ -207,6 +199,7 @@ def get_gold_batcher(
         min_pxt_insert_size=min_pxt_insert_size,
         batch_size=goldener_batch_size,
         num_workers=num_workers,
+        to_keep_schema={"label": pxt.String},
     )
 
     descriptor = get_gold_descriptor(
@@ -215,6 +208,7 @@ def get_gold_batcher(
         batch_size=goldener_batch_size,
         num_workers=num_workers,
         max_batches=max_batches,
+        to_keep_schema={"label": pxt.String},
     )
 
     return GoldClusterizedBatchSampler(
