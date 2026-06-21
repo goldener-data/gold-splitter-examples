@@ -1642,6 +1642,7 @@ reports = [
 ]
 text = [
     { name = "datasets" },
+    { name = "sentence-transformers" },
     { name = "transformers" },
 ]
 vision = [
@@ -1679,6 +1680,7 @@ requires-dist = [
     { name = "scikit-learn" },
     { name = "seaborn", marker = "extra == 'reports'" },
     { name = "segmentation-models-pytorch", marker = "extra == 'vision'" },
+    { name = "sentence-transformers", marker = "extra == 'text'" },
     { name = "tabulate", marker = "extra == 'reports'" },
     { name = "timm", marker = "extra == 'vision'" },
     { name = "torch" },
@@ -1701,7 +1703,7 @@ dev = [
 
 [[package]]
 name = "goldener"
-version = "6.4.0"
+version = "6.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "coreax" },
@@ -1716,9 +1718,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "umap-learn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/84/28/e7d4082b2192c0d2439febfc56dc7cea80fa64859baf6f8084966b01e393/goldener-6.4.0.tar.gz", hash = "sha256:fe07109b60e18ae0f50aa89d7132a098b33aff6baef270e1ed422bfde31ce3df", size = 100185, upload-time = "2026-05-04T19:40:13.136Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/e4/7338b95d7c299102d8b997a5bb31044a2a956fb84986a889b44661e20e57/goldener-6.6.0.tar.gz", hash = "sha256:1a1a25c94856a7e7d6ebc43967feeee71c262391a4d957b141c424029fd5f3d1", size = 102453, upload-time = "2026-05-10T19:58:35.391Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a9/7c/5247e41b9d9490431a9a4a13b20e514d4059b389f69a28dfa853e3430af7/goldener-6.4.0-py3-none-any.whl", hash = "sha256:b6c14ef8b1e0612288af5c5a8f13f2eb7b88ea2d018967ae6dfcc5738d43fa37", size = 76922, upload-time = "2026-05-04T19:40:11.488Z" },
+    { url = "https://files.pythonhosted.org/packages/f0/76/af4cd51cea8197efccc1b0bd03c00c02947667468475081b3e6052aeabda/goldener-6.6.0-py3-none-any.whl", hash = "sha256:d08ab2da975a81ba18cdecaf628e577a90c3730dc36ff1207f7d5de507cd2912", size = 78828, upload-time = "2026-05-10T19:58:33.904Z" },
 ]
 
 [[package]]
@@ -6404,6 +6406,28 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c5/f0/184b4b5f8d00f2a92cf96eec8967a3d550b52cf94362dad1100df9e48d57/send2trash-2.1.0.tar.gz", hash = "sha256:1c72b39f09457db3c05ce1d19158c2cbef4c32b8bedd02c155e49282b7ea7459", size = 17255, upload-time = "2026-01-14T06:27:36.056Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1c/78/504fdd027da3b84ff1aecd9f6957e65f35134534ccc6da8628eb71e76d3f/send2trash-2.1.0-py3-none-any.whl", hash = "sha256:0da2f112e6d6bb22de6aa6daa7e144831a4febf2a87261451c4ad849fe9a873c", size = 17610, upload-time = "2026-01-14T06:27:35.218Z" },
+]
+
+[[package]]
+name = "sentence-transformers"
+version = "5.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "huggingface-hub" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scikit-learn", version = "1.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "torch" },
+    { name = "tqdm" },
+    { name = "transformers" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cf/d4/7ef93157485e978c016f49da05363c1e4e7237beb5343b64b5631101f0f1/sentence_transformers-5.5.1.tar.gz", hash = "sha256:02b7740dfc60bdbbcb6061625f5d97a5c1a4e2d3baac5f9391b912bb5eae2290", size = 445161, upload-time = "2026-05-20T07:37:44.465Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bf/03/ee99a6b030e7a2e056547729f8a4709dd93e13d9c6f07590f74c395c4017/sentence_transformers-5.5.1-py3-none-any.whl", hash = "sha256:4fe11d433badc5282d32f7fc08bc714216b7a5aca426f9df77a45a554756deb7", size = 588887, upload-time = "2026-05-20T07:37:43.004Z" },
 ]
 
 [[package]]

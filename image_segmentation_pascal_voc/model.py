@@ -105,7 +105,7 @@ class VOCSegmentationLightningModule(LightningModule):
         seg_y = transform_rgb_mask_to_class_mask(y, self.RGB_TO_CLASS_IDX)
 
         loss = F.cross_entropy(logits, seg_y)
-        self.log(f"{prefix}_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log(f"{prefix}_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
 
         preds = transform_segmentation_logits_to_rgb_preds(
             logits, self.RGB_TO_CLASS_IDX

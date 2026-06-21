@@ -101,7 +101,7 @@ class Cifar10LightningModule(LightningModule):
         # loss
         logits = self(x)
         loss = F.cross_entropy(logits, y)
-        self.log(f"{prefix}_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log(f"{prefix}_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
 
         # accuracy
         preds = torch.argmax(logits, dim=1)

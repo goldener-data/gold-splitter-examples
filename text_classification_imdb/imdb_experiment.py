@@ -62,6 +62,8 @@ def run_experiment(
             "splitting_duration": splitting_duration,
             "splitting_update_selection": cfg.goldener_config.update_selection,
             "n_clusters": cfg.goldener_config.n_clusters,
+            "n_clusters_batcher": cfg.goldener_config.n_clusters_batcher,
+            "n_components_batcher": cfg.goldener_config.n_components_batcher,
         }
     )
 
